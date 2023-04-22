@@ -40,12 +40,13 @@ def main():
         description="Outputs a tsv read id to tax id mapping from a sam file")
     parser.add_argument(
         "-e",
-        "--exclude_none",
+        "--exclude-none",
+        dest="exclude_none",
         action="store_true",
         help="Do not print out reads with no mapping location")
     parser.add_argument(
         "-t",
-        "--top_mapq",
+        "--top-mapq",
         action="store_true",
         help="Only keep the highest MAPQ value for each read "
              "(Note: there may be multiple mappings with the same quality, applies before -l option)")
@@ -53,17 +54,19 @@ def main():
         "-l",
         "--lca",
         default=None,
-        help="Make each read map to a single tax id by using the lca"
+        help="Make each read map to a single tax id by using the lca "
              "(Note: must specify NCBI taxonomy directory if you want lca, applies after -t option)")
     parser.add_argument(
         "accession2taxid",
         help="Tab separated accession to tax id")
-    parser.add_argument("sam_file", help="SAM alignment file")
+    parser.add_argument(
+        "sam_file",
+        help="SAM alignment file")
     args = parser.parse_args()
 
     # Initialize event logger
     logging.basicConfig(
-        stream=sys.stdout,
+        stream=sys.stderr,
         level=logging.DEBUG,
         format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
         datefmt='%m-%d-%Y %I:%M:%S%p')
@@ -71,8 +74,13 @@ def main():
     # Read taxonomy
     taxonomy = None
     if args.lca is not None:
+        logging.info(f"Taxonomy provided, reading from directory {args.lca}")
         taxonomy = Taxonomy.from_ncbi(args.lca)
+        logging.info("Taxonomy read!")
+    else:
+        logging.info("No taxonomy provided, lca will not be used.")
 
+    logging.info(f"Reading accession2taxid at {args.accession2taxid}")
     # Read accession2taxid
     accession2taxid = pd.read_table(
         args.accession2taxid,
@@ -80,10 +88,14 @@ def main():
         dtype={
             'accession': 'string',
             'taxid': 'int'})
+    logging.info("Accession2taxid read!")
 
     # Read SAM file
+    logging.info(f"Reading sam file at {args.sam_file}")
     sam_file_iter = iter(pysam.AlignmentFile(args.sam_file, "r"))
+    logging.info(f"Sam file read!")
 
+    logging.info("Extracting readid2taxid")
     all_readids = set()
     last_readid = ""
     readid_mappings = set()
@@ -124,7 +136,7 @@ def main():
             elif not args.exclude_none:
                 readid_mappings.add((0, 0))
     process_mappings(args.top_mapq, taxonomy, last_readid, readid_mappings)
-
+    logging.info("Done!")
 
 if __name__ == '__main__':
     main()
