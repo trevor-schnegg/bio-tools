@@ -138,5 +138,6 @@ def main():
     process_mappings(args.top_mapq, taxonomy, last_readid, readid_mappings)
     logging.info("Done!")
 
+
 if __name__ == '__main__':
     main()

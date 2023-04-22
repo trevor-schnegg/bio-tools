@@ -14,6 +14,7 @@ def tab_separated_list(values) -> str:
             string += ("\t" + value)
     return string
 
+
 def main():
 
     # Parse arguments from command line
@@ -32,7 +33,7 @@ def main():
         help="Comma separated list of columns to output"
              "(E.g. 4,6,1 will output 4<tab>6<tab>1)")
     args = parser.parse_args()
-    columns = list(map(lambda x: int(x),args.columns.split(",")))
+    columns = list(map(lambda x: int(x), args.columns.split(",")))
 
     # Initialize event logger
     logging.basicConfig(
@@ -48,6 +49,7 @@ def main():
         skiprows=1 if args.skip_header else None,
         header=None,
         usecols=columns)
+    input_table.sort_values(columns[0], inplace=True)
     logging.info("Table read!")
 
     logging.info("Outputting desired columns")
