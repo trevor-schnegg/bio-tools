@@ -27,9 +27,11 @@ def process_mappings(mapq, taxonomy, readid, readid_mappings):
             lca = taxonomy.lca(lca, str(taxid)).id
         print_mappings(readid, [lca])
 
+
 def print_mappings(readid: str, taxids: list[int]):
     for taxid in taxids:
         print(f"{readid}\t{str(taxid)}")
+
 
 def main():
 
@@ -102,12 +104,17 @@ def main():
         else:
             # This is a new read
             # Print the information for the last read
-            process_mappings(args.top_mapq, taxonomy, last_readid, readid_mappings)
+            process_mappings(
+                args.top_mapq,
+                taxonomy,
+                last_readid,
+                readid_mappings)
             # Initialize new read stats
             if last_readid not in all_readids:
                 all_readids.add(last_readid)
             else:
-                raise Exception(f"Read id {last_readid} appeared more than once out of sequence")
+                raise Exception(
+                    f"Read id {last_readid} appeared more than once out of sequence")
 
             last_readid = readid
             readid_mappings.clear()
@@ -117,7 +124,6 @@ def main():
             elif not args.exclude_none:
                 readid_mappings.add((0, 0))
     process_mappings(args.top_mapq, taxonomy, last_readid, readid_mappings)
-
 
 
 if __name__ == '__main__':
