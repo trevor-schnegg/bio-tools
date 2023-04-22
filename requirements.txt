@@ -1,0 +1,12 @@
+autopep8==2.0.2
+Cython==0.29.34
+numpy==1.24.2
+pandas==2.0.0
+pycodestyle==2.10.0
+pysam==0.21.0
+python-dateutil==2.8.2
+pytz==2023.3
+six==1.16.0
+taxonomy==0.10.0
+tomli==2.0.1
+tzdata==2023.3
