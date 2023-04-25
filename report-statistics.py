@@ -6,12 +6,21 @@ import pandas as pd
 from taxonomy.taxonomy import Taxonomy
 
 
-def main():
+def get_taxid_of_readid(dataframe: pd.DataFrame, readid: str):
+    try:
+        taxid = dataframe.loc[dataframe["readid"] == readid]["taxid"].values[0]
+    except IndexError:
+        return None
+    else:
+        return taxid
 
+
+def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. "
                     "of a classifier")
+    parser.add_argument("-i", "--include-header", dest="include_header", action="store_true", help="Prints the header line before the output")
     parser.add_argument(
         "-c",
         "--classifier-name",
@@ -25,7 +34,7 @@ def main():
         "ground_truth_readid2taxid",
         help="Tab separated read id to tax id of bwa-mem or other ground truth")
     parser.add_argument(
-        "test_readid2taxid",
+        "predicted_readid2taxid",
         help="Tab separated read id to tax id of the classifier")
     args = parser.parse_args()
 
@@ -38,26 +47,115 @@ def main():
 
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
-    taxonomy = Taxonomy.from_ncbi(args.taxonomy)
+    taxonomy: Taxonomy = Taxonomy.from_ncbi(args.taxonomy)
     logging.info("Taxonomy read!")
 
-    logging.info(f"Reading ground_truth_readid2taxid at {args.readid2taxid}")
+    logging.info(
+        f"Reading ground_truth_readid2taxid at {args.ground_truth_readid2taxid}")
     # Read both readid2taxids
     ground_truth_readid2taxid = pd.read_table(
-        args.readid2taxid,
+        args.ground_truth_readid2taxid,
         names=["readid", "taxid"],
         dtype={
             'readid': 'string',
             'taxid': 'int'})
-    test_readid2taxid = pd.read_table(
-        args.readid2taxid,
+    logging.info(
+        f"Reading predicted_readid2taxid at {args.predicted_readid2taxid}")
+    predicted_readid2taxid = pd.read_table(
+        args.predicted_readid2taxid,
         names=["readid", "taxid"],
         dtype={
             'readid': 'string',
             'taxid': 'int'})
     logging.info("Both readid2taxids read!")
 
+    # Compute the desired statistics for each tax id
     logging.info("Computing statistics")
+    evaluation_levels = {"genus", "species", "strain"}
+    stats = {}
+    for level in evaluation_levels:
+        stats[level + "_total"] = 0
+        stats[level + "_tp"] = 0
+        stats[level + "_fp"] = 0
+        stats[level + "_fn"] = 0
+    for _, values in ground_truth_readid2taxid.iterrows():
+        if values["taxid"] == 0:
+            # If the tax id of the ground truth is 0, ignore this read
+            continue
+        else:
+            # Get ground truth value and lineage
+            ground_truth = values["taxid"]
+            ground_truth_lineage = list(
+                filter(
+                    lambda x: True if x.rank in evaluation_levels else False,
+                    taxonomy.lineage(
+                        str(ground_truth))))
+            ground_truth_lineage.reverse()
+
+            # Increment the ground truth total numbers immediately
+            for node in ground_truth_lineage:
+                stats[node.rank + "_total"] += 1
+
+            # Get the predicted tax id
+            prediction = get_taxid_of_readid(
+                predicted_readid2taxid, values["readid"])
+
+            # If the predicted tax id is 0, it has no lineage and will throw an error
+            # Therefore, increment false negative counts and continue
+            if prediction == 0:
+                for node in ground_truth_lineage:
+                    stats[node.rank + "_fn"] += 1
+                continue
+
+            # Get the lineage for the predicted tax id
+            prediction_lineage = list(
+                filter(
+                    lambda x: True if x.rank in evaluation_levels else False,
+                    taxonomy.lineage(
+                        str(prediction))))
+            prediction_lineage.reverse()
+
+            # Ignores classifier assignments that are more specific than the ground truth!
+            is_predicted_shorter = False
+            for index, true_node in enumerate(ground_truth_lineage):
+                try:
+                    if is_predicted_shorter:
+                        stats[true_node.rank + "_fn"] += 1
+                        continue
+                    predicted_node = prediction_lineage[index]
+                except IndexError:
+                    is_predicted_shorter = True
+                    stats[true_node.rank + "_fn"] += 1
+                else:
+                    assert true_node.rank == predicted_node.rank
+                    if true_node.id == predicted_node.id:
+                        stats[true_node.rank + "_tp"] += 1
+                    else:
+                        stats[true_node.rank + "_fp"] += 1
+
+    statistics = {"precision", "recall", "accuracy"}
+    # Print header line if required
+    if args.include_header:
+        header_string = "classifier"
+        for stat in statistics:
+            for level in evaluation_levels:
+                header_string += f"\t{level + '_' + stat}"
+        print(header_string)
+
+    # Print statistics
+    report_string = args.classifier_name
+    for stat in statistics:
+        for level in evaluation_levels:
+            total = stats[level + "_total"]
+            true_postives = stats[level + "_tp"]
+            if stat == "precision":
+                report_string += f'\t{true_postives/(true_postives + stats[level + "_fp"])}'
+            elif stat == "recall":
+                report_string += f'\t{true_postives/(true_postives + stats[level + "_fn"])}'
+            elif stat == "accuracy":
+                report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
+    print(report_string)
+
 
 
 if __name__ == '__main__':
