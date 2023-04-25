@@ -20,7 +20,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. "
                     "of a classifier")
-    parser.add_argument("-i", "--include-header", dest="include_header", action="store_true", help="Prints the header line before the output")
+    parser.add_argument(
+        "-i",
+        "--include-header",
+        dest="include_header",
+        action="store_true",
+        help="Prints the header line before the output")
     parser.add_argument(
         "-c",
         "--classifier-name",
@@ -115,7 +120,8 @@ def main():
                         str(prediction))))
             prediction_lineage.reverse()
 
-            # Ignores classifier assignments that are more specific than the ground truth!
+            # Ignores classifier assignments that are more specific than the
+            # ground truth!
             is_predicted_shorter = False
             for index, true_node in enumerate(ground_truth_lineage):
                 try:
@@ -155,7 +161,6 @@ def main():
             elif stat == "accuracy":
                 report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
     print(report_string)
-
 
 
 if __name__ == '__main__':
