@@ -34,7 +34,8 @@ def main():
     logging.info("Needed accessions obtained!")
 
     # Read through accession2taxid
-    logging.info(f"Reading accession2taxid at {args.accession2taxid}, this may take awhile...")
+    logging.info(
+        f"Reading accession2taxid at {args.accession2taxid}, this may take awhile...")
     with open(args.accession2taxid, 'r') as accession2taxid:
         for line in accession2taxid:
             formatted_line = line.strip().split('\t')

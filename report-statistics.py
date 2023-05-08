@@ -10,7 +10,7 @@ def get_taxid_of_readid(dataframe: pd.DataFrame, readid: str):
     try:
         taxid = dataframe.loc[dataframe["readid"] == readid]["taxid"].values[0]
     except IndexError:
-        return None
+        return 0
     else:
         return taxid
 
@@ -76,7 +76,7 @@ def main():
 
     # Compute the desired statistics for each tax id
     logging.info("Computing statistics")
-    evaluation_levels = {"genus", "species", "strain"}
+    evaluation_levels = ["genus", "species", "strain"]
     stats = {}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
@@ -121,7 +121,7 @@ def main():
             prediction_lineage.reverse()
 
             # Ignores classifier assignments that are more specific than the
-            # ground truth!
+            # ground truth
             is_predicted_shorter = False
             for index, true_node in enumerate(ground_truth_lineage):
                 try:
@@ -139,17 +139,21 @@ def main():
                     else:
                         stats[true_node.rank + "_fp"] += 1
 
-    statistics = {"precision", "recall", "accuracy"}
+    statistics = ["precision", "recall", "accuracy"]
     # Print header line if required
     if args.include_header:
-        header_string = "classifier"
+        header_string = ""
+        if args.classifier_name is not None:
+            header_string = "classifier"
         for stat in statistics:
             for level in evaluation_levels:
                 header_string += f"\t{level + '_' + stat}"
-        print(header_string)
+        print(header_string.strip())
 
     # Print statistics
-    report_string = args.classifier_name
+    report_string = ""
+    if args.classifier_name is not None:
+        report_string = args.classifier_name
     for stat in statistics:
         for level in evaluation_levels:
             total = stats[level + "_total"]
@@ -160,7 +164,7 @@ def main():
                 report_string += f'\t{true_postives/(true_postives + stats[level + "_fn"])}'
             elif stat == "accuracy":
                 report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
-    print(report_string)
+    print(report_string.strip())
 
 
 if __name__ == '__main__':
