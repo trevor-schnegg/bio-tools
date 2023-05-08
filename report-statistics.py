@@ -21,6 +21,13 @@ def main():
         description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. "
                     "of a classifier")
     parser.add_argument(
+        "-g",
+        "--give-formulas",
+        dest="give_formulas",
+        action="store_true",
+        help="If specified, print the formulas used for precision, recall, and accuracy"
+    )
+    parser.add_argument(
         "-i",
         "--include-header",
         dest="include_header",
@@ -138,6 +145,13 @@ def main():
                         stats[true_node.rank + "_tp"] += 1
                     else:
                         stats[true_node.rank + "_fp"] += 1
+
+    # Print formulas if needed
+    if args.give_formulas:
+        print("TP = True Positives, FP = False Positives, FN = False Negatives")
+        print("precision = TP / (TP + FP)")
+        print("recall = TP / (TP + FN)")
+        print("accuracy = TP / (TP + FP + FN)\n")
 
     statistics = ["precision", "recall", "accuracy"]
     # Print header line if required
