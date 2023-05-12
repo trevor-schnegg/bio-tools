@@ -88,6 +88,9 @@ def main():
         dtype={
             'accession': 'string',
             'taxid': 'int'})
+    mem_accession2taxid = {}
+    for _, (accession, taxid) in accession2taxid.iterrows():
+        mem_accession2taxid[accession] = taxid
     logging.info("Accession2taxid read!")
 
     # Read SAM file
@@ -109,7 +112,7 @@ def main():
             last_readid = readid
             if accession is not None:
                 readid_mappings.add(
-                    (accession2taxid.loc[accession2taxid['accession'] == accession]['taxid'].values[0], mapq))
+                    (mem_accession2taxid[accession], mapq))
             elif not args.exclude_none:
                 readid_mappings.add((0, 0))
             continue

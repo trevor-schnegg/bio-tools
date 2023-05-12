@@ -99,12 +99,12 @@ def main():
                     best_prob_tax_id = label
                 else:
                     best_prob_tax_id = accession2taxid[label]
-        if best_prob < 0.000001:
+        if best_prob < 0.000000000000001:
             print(f"{read.id}\t{best_prob_tax_id}")
         else:
             print(f"{read.id}\t0")
 
-
+    logging.info("Done!")
 
 if __name__ == '__main__':
     main()
