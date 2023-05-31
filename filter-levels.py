@@ -73,7 +73,7 @@ def main():
     reference = SeqIO.parse(args.reference_fasta, 'fasta')
 
     if args.dry_run:
-        taxon_ranks_present = set()
+        # genus_counts = {}
         total_sequence_len = 0
         included_sequence_len = 0
         excluded_sequence_len = 0
@@ -83,10 +83,17 @@ def main():
             tax_node = taxonomy.node(accession2taxid[record.id])
             if tax_node is None:
                 skipped_sequence_len += len(record.seq)
-                logging.warning(f"taxid '{accession2taxid[record.id]}' not found in taxonomy, skipping...")
+                logging.warning(
+                    f"taxid '{accession2taxid[record.id]}' not found in taxonomy, skipping...")
                 continue
-            else:
-                taxon_ranks_present.add(tax_node.rank)
+
+            # # Block to determine the genus and increment counts, if there is one
+            # genus = taxonomy.parent(accession2taxid[record.id], at_rank='genus')
+            # if genus is not None:
+            #     if genus.name in genus_counts:
+            #         genus_counts[genus.name] += 1
+            #     else:
+            #         genus_counts[genus.name] = 1
 
             if args.include and tax_node.rank in taxon_levels:
                 included_sequence_len += len(record.seq)
@@ -98,12 +105,14 @@ def main():
         logging.info(f"skipped sequence length was: {skipped_sequence_len}")
         logging.info(f"included sequence length was {included_sequence_len}")
         logging.info(f"excluded sequence length was {excluded_sequence_len}")
-        logging.info(f"all taxon ranks present: {taxon_ranks_present}")
+        # for name, count in genus_counts.items():
+        #     print(f"{name}\t{count}")
     else:
         for record in reference:
             tax_node = taxonomy.node(accession2taxid[record.id])
             if tax_node is None:
-                logging.warning(f"taxid '{accession2taxid[record.id]}' not found in taxonomy, skipping...")
+                logging.warning(
+                    f"taxid '{accession2taxid[record.id]}' not found in taxonomy, skipping...")
                 continue
             elif args.include and tax_node.rank in taxon_levels:
                 SeqIO.write(record, sys.stdout, "fasta")
