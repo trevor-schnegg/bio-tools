@@ -34,7 +34,6 @@ def main():
             name = line[0] + " " + line[1]
             names.add(name)
 
-
     # Read the fasta file
     logging.info(f"Looping through reference file at {args.reference_fasta}")
     reference_set = set()
