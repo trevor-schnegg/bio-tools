@@ -48,8 +48,6 @@ def main():
         if name in reference_set:
             print(f"{name} was found")
 
-    # Read through accession2taxid
-
 
 if __name__ == '__main__':
     main()
