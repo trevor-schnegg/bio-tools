@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 
 from Bio import SeqIO
@@ -14,8 +15,8 @@ def main():
         "names_file",
         help="The file of names to check")
     parser.add_argument(
-        "reference_fasta",
-        help="The reference file in fasta format")
+        "reference_dir",
+        help="The reference directory with fasta files")
     args = parser.parse_args()
 
     # Initialize event logger
@@ -35,13 +36,17 @@ def main():
             names.add(name)
 
     # Read the fasta file
-    logging.info(f"Looping through reference file at {args.reference_fasta}")
+    logging.info(f"Looping through reference files in {args.reference_dir}")
     reference_set = set()
-    fasta_file = SeqIO.parse(args.reference_fasta, 'fasta')
-    for record in fasta_file:
-        name = record.description.strip().split(" ")
-        name = name[1] + " " + name[2]
-        reference_set.add(name)
+    for file in os.listdir(args.reference_dir):
+        if file.endswith('.fna'):
+            fasta_file = SeqIO.parse(os.path.join(args.reference_dir, file), 'fasta')
+            for record in fasta_file:
+                name = record.description.strip().split(" ")
+                name = name[1] + " " + name[2]
+                if name == "Saccharomyces cerevisiae":
+                    print(record)
+                reference_set.add(name)
     logging.info("Done reading through reference!")
 
     for name in names:
