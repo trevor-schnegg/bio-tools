@@ -24,7 +24,7 @@ def main():
         "-t",
         "--threads",
         type=int,
-        default=14,
+        default=12,
         help="Number of threads to use")
     parser.add_argument(
         "names_file",
@@ -60,7 +60,7 @@ def main():
             for name in result:
                 reference_set.add(name)
             files_read += 1
-            if files_read % 100 == 0:
+            if files_read % 1000 == 0:
                 logging.debug(f"{files_read} files read")
     logging.info("Done reading through reference!")
 
