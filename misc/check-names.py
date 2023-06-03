@@ -3,14 +3,29 @@ import logging
 import os
 import sys
 
+from multiprocessing.pool import Pool
 from Bio import SeqIO
 
+
+def get_sequence_names(fasta_file):
+    names = []
+    for record in SeqIO.parse(fasta_file, 'fasta'):
+        name = record.description.strip().split(" ")
+        name = name[1] + " " + name[2]
+        names.append(name)
+    return names
 
 def main():
 
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Takes a file of names and a reference file and checks if the names are in the reference")
+    parser.add_argument(
+        "-t",
+        "--threads",
+        type=int,
+        default=14,
+        help="Number of threads to use")
     parser.add_argument(
         "names_file",
         help="The file of names to check")
@@ -38,15 +53,15 @@ def main():
     # Read the fasta file
     logging.info(f"Looping through reference files in {args.reference_dir}")
     reference_set = set()
-    for file in os.listdir(args.reference_dir):
-        if file.endswith('.fna'):
-            fasta_file = SeqIO.parse(os.path.join(args.reference_dir, file), 'fasta')
-            for record in fasta_file:
-                name = record.description.strip().split(" ")
-                name = name[1] + " " + name[2]
-                if name == "Saccharomyces cerevisiae":
-                    print(record)
+    with Pool(args.threads) as pool:
+        reference_files = map(lambda x: os.path.join(args.reference_dir, x), filter(lambda x: x.endswith('.fna'), os.listdir(args.reference_dir)))
+        files_read = 0
+        for result in pool.imap(get_sequence_names, reference_files):
+            for name in result:
                 reference_set.add(name)
+            files_read += 1
+            if files_read % 100 == 0:
+                logging.debug(f"{files_read} files read")
     logging.info("Done reading through reference!")
 
     for name in names:
