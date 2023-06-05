@@ -14,8 +14,13 @@ def get_accessions(fasta_file):
         accessions.append(record.id)
     return accessions
 
-def main():
 
+def get_first_accession(fasta_file):
+    accessions = []
+    return next(SeqIO.parse(fasta_file, 'fasta')).id
+
+
+def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Takes a file of names and a reference file and checks if the names are in the reference")
@@ -30,7 +35,7 @@ def main():
         "-t",
         "--threads",
         type=int,
-        default=12,
+        default=14,
         help="Number of threads to use")
     parser.add_argument(
         "accession2taxid",
@@ -69,16 +74,21 @@ def main():
     logging.info(f"Looping through reference files in {args.reference_dir}")
     parent_to_count = {}
     with Pool(args.threads) as pool:
-        reference_files = map(lambda x: os.path.join(args.reference_dir, x), filter(lambda x: x.endswith('.fna'), os.listdir(args.reference_dir)))
+        reference_files = map(
+            lambda x: os.path.join(
+                args.reference_dir, x), filter(
+                lambda x: x.endswith('.fna'), os.listdir(
+                    args.reference_dir)))
         files_read = 0
-        for result in pool.imap(get_accessions, reference_files):
-            for accession in result:
-                species_parent = taxonomy.parent(accession2taxid[accession], args.rank)
-                if species_parent is not None:
-                    if species_parent in parent_to_count:
-                        parent_to_count[species_parent] += 1
-                    else:
-                        parent_to_count[species_parent] = 1
+        for accession in pool.imap(get_first_accession, reference_files):
+            species_parent = taxonomy.parent(
+                accession2taxid[accession], args.rank)
+            print(species_parent)
+            if species_parent is not None:
+                if species_parent in parent_to_count:
+                    parent_to_count[species_parent] += 1
+                else:
+                    parent_to_count[species_parent] = 1
             files_read += 1
             if files_read % 1000 == 0:
                 logging.debug(f"{files_read} files processed")
@@ -86,7 +96,12 @@ def main():
     all_counts = []
     for parent, count in parent_to_count.items():
         all_counts.append((count, parent))
-    for (count, parent) in sorted(all_counts, key=lambda x: x[0], reverse=True):
+    for (
+            count,
+            parent) in sorted(
+            all_counts,
+            key=lambda x: x[0],
+            reverse=True):
         print(f"{parent.id}\t{count}")
 
 

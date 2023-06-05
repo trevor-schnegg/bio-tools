@@ -47,20 +47,24 @@ def main():
     species = split_input_file[1]
     id_prefix = genus[0] + species[0]
     id_number = 1
-    output_file_prefix = reduce(lambda acc, x: acc + "/" + x, args.zymo_reference.split("/")[:-1]) + "/" + genus + "_" + species + "_formatted"
+    output_file_prefix = reduce(
+        lambda acc, x: acc + "/" + x, args.zymo_reference.split("/")[
+            :-1]) + "/" + genus + "_" + species + "_formatted"
     logging.info(f"Will write to files with prefix '{output_file_prefix}'")
 
     # Get tax id of all records
     potential_nodes = taxonomy.find_all_by_name(genus + " " + species)
     if len(potential_nodes) != 1:
-        logging.error(f"{genus} {species} didn't return exactly 1 node, don't know what to do")
+        logging.error(
+            f"{genus} {species} didn't return exactly 1 node, don't know what to do")
         logging.error(f"The following nodes were found: {potential_nodes}")
         sys.exit()
     else:
         tax_node = potential_nodes[0]
         tax_id = tax_node.id
 
-    # Read the reference fasta file and create a new fasta file and accession2taxid for the new file
+    # Read the reference fasta file and create a new fasta file and
+    # accession2taxid for the new file
     logging.info(f"Looping through reference file at {args.zymo_reference}")
     fasta_file = SeqIO.parse(args.zymo_reference, 'fasta')
     with open(output_file_prefix + ".fasta", "w") as out_file_handle:

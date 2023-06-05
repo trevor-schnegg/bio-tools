@@ -15,6 +15,7 @@ def get_sequence_names(fasta_file):
         names.append(name)
     return names
 
+
 def main():
 
     # Parse arguments from command line
@@ -54,7 +55,11 @@ def main():
     logging.info(f"Looping through reference files in {args.reference_dir}")
     reference_set = set()
     with Pool(args.threads) as pool:
-        reference_files = map(lambda x: os.path.join(args.reference_dir, x), filter(lambda x: x.endswith('.fna'), os.listdir(args.reference_dir)))
+        reference_files = map(
+            lambda x: os.path.join(
+                args.reference_dir, x), filter(
+                lambda x: x.endswith('.fna'), os.listdir(
+                    args.reference_dir)))
         files_read = 0
         for result in pool.imap(get_sequence_names, reference_files):
             for name in result:
