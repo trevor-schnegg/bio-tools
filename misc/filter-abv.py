@@ -42,8 +42,9 @@ def main():
     logging.info(f"Looping through reference files in {args.abv}")
     with Pool(args.threads) as pool:
         reference_files = map(
-            lambda x: os.path.join(
-                args.abv, x), filter(
+            lambda x: os.path.realpath(
+                os.path.join(
+                    args.abv, x)), filter(
                 lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
                     args.abv)))
         all_files = pool.map(get_info, reference_files)
