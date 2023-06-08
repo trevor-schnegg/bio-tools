@@ -47,15 +47,16 @@ def main():
                 lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
                     args.abv)))
         all_files = pool.map(get_info, reference_files)
-        # 73300000 is the size of the zymo genomes
         total_current_size = sum(map(lambda x: x[1], all_files))
-        print(total_current_size)
+        print(f"current total size: {total_current_size}")
+        # 31513498 is the size of the zymo genomes
         half_total_size = round(total_current_size / 2)
-        print(half_total_size)
+        print(f"goal total size: {half_total_size}")
         while total_current_size > half_total_size:
             random_index = random.randint(0, len(all_files) - 1)
             total_current_size -= all_files[random_index][1]
             all_files.pop(random_index)
+        print(f"resulting size: {sum(map(lambda x: x[1], all_files))}")
         for (file, _) in all_files:
             subprocess.run(["ln", "-s", file, args.output_dir])
 
