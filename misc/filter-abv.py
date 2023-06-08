@@ -44,7 +44,7 @@ def main():
         reference_files = map(
             lambda x: os.path.join(
                 args.abv, x), filter(
-                lambda x: x.endswith('.fna'), os.listdir(
+                lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
                     args.abv)))
         all_files = pool.map(get_info, reference_files)
         # 73300000 is the size of the zymo genomes
