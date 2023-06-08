@@ -16,7 +16,7 @@ def main():
 
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Outputs a fasta directory with references to genomes in abv of approximately the input size")
+        description="Outputs a fasta directory with references to genomes in abv of approximately 1/2 input size")
     parser.add_argument(
         "-t",
         "--threads",
@@ -30,15 +30,7 @@ def main():
         "output_dir",
         help="Location of the directory to output symbolic links to"
     )
-    parser.add_argument(
-        "size",
-        type=int,
-        help="The size of the filtered abv you'd like to create (in bytes)"
-    )
     args = parser.parse_args()
-
-    # 73300000 is the size of the zymo genomes
-    output_size = args.size - 73300000
 
     # Initialize event logger
     logging.basicConfig(
@@ -54,13 +46,18 @@ def main():
                 args.abv, x), filter(
                 lambda x: x.endswith('.fna'), os.listdir(
                     args.abv)))
-        total_size = 0
         all_files = pool.map(get_info, reference_files)
-        while total_size < output_size:
+        # 73300000 is the size of the zymo genomes
+        total_current_size = sum(map(lambda x: x[1], all_files))
+        print(total_current_size)
+        half_total_size = round(total_current_size / 2)
+        print(half_total_size)
+        while total_current_size > half_total_size:
             random_index = random.randint(0, len(all_files) - 1)
-            subprocess.run(["ln", "-s", all_files[random_index][0], args.output_dir])
-            total_size += all_files[random_index][1]
+            total_current_size -= all_files[random_index][1]
             all_files.pop(random_index)
+        for (file, _) in all_files:
+            subprocess.run(["ln", "-s", file, args.output_dir])
 
 
 if __name__ == '__main__':
