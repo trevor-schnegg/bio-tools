@@ -24,6 +24,7 @@ def run_deepsim(info):
         record_length = len(next(SeqIO.parse(orig_fasta_path, 'fasta')).seq)
         subprocess.run([deepsim_binary, '-i', orig_fasta_path, '-o', output_path])
     else:
+        None
 
 
 
