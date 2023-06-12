@@ -21,13 +21,13 @@ def run_deepsim(args_tuple):
     # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
     # on the original file
     if longest_record is None:
-        subprocess.run([deepsim_binary, '-i', fasta_file_path, '-o', output_path, '-c', "1", '-n',
+        subprocess.run([deepsim_binary, '-i', fasta_file_path, '-o', output_path, '-n',
                         str(round(longest_record_length/220) * 5), '-e', "1.25", '-s', "1.25"])
     else:
         temp_file = os.path.join(output_dir, fasta_file + ".tmp")
         with open(temp_file, "w") as f:
             SeqIO.write(longest_record, f, 'fasta')
-        subprocess.run([deepsim_binary, '-i', temp_file, '-o', output_path, '-c', "1", '-n',
+        subprocess.run([deepsim_binary, '-i', temp_file, '-o', output_path, '-n',
                         str(round(longest_record_length / 220) * 5), '-e', "1.25", '-s', "1.25"])
         subprocess.run(["rm", temp_file])
 
