@@ -9,26 +9,31 @@ from multiprocessing.pool import Pool
 from Bio import SeqIO
 
 
-def run_deepsim(info):
-    orig_fasta_path = info[0]
-    orig_fasta_file = orig_fasta_path.split("/")[-1]
-    longest_record = info[1]
+def run_deepsim(args_tuple):
+    fasta_file_path, deepsim_binary, output_dir = args_tuple
 
-    deepsim_binary = info[2]
-    output_dir = info[3]
-    shortest_seq = info[4]
+    file_info = get_longest_record(fasta_file_path)
+    longest_record, longest_record_length = file_info
+
+    fasta_file = fasta_file_path.split("/")[-1]
+    output_path = os.path.join(output_dir, fasta_file)
+
     # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
     # on the original file
     if longest_record is None:
-        output_path = os.path.join(output_dir, orig_fasta_file)
-        record_length = len(next(SeqIO.parse(orig_fasta_path, 'fasta')).seq)
-        subprocess.run([deepsim_binary, '-i', orig_fasta_path, '-o', output_path])
+        subprocess.run([deepsim_binary, '-i', fasta_file_path, '-o', output_path, '-c', "1", '-n',
+                        str(round(longest_record_length/220) * 5), '-e', "1.25", '-s', "1.25"])
     else:
-        None
+        temp_file = os.path.join(output_dir, fasta_file + ".tmp")
+        with open(temp_file, "w") as f:
+            SeqIO.write(longest_record, f, 'fasta')
+        subprocess.run([deepsim_binary, '-i', temp_file, '-o', output_path, '-c', "1", '-n',
+                        str(round(longest_record_length / 220) * 5), '-e', "1.25", '-s', "1.25"])
+        subprocess.run(["rm", temp_file])
 
 
 
-def get_info(fasta_file):
+def get_longest_record(fasta_file):
     longest_record = None
     largest_record_index = -1
     for i, record in enumerate(SeqIO.parse(fasta_file, 'fasta')):
@@ -37,7 +42,7 @@ def get_info(fasta_file):
             longest_record = record
         elif len(record.seq) > len(longest_record.seq):
             longest_record = record
-    return fasta_file, None if largest_record_index == 0 else longest_record, len(longest_record.seq)
+    return None if largest_record_index == 0 else longest_record, len(longest_record.seq)
 
 
 def main():
@@ -46,10 +51,17 @@ def main():
     parser = argparse.ArgumentParser(
         description="Calls Deep-Simulator to create the desired simulated reads")
     parser.add_argument(
+        "-c",
+        "--calculate-stats",
+        dest="calculate_stats",
+        action="store_true",
+        help="Option to calculate the total number of bases to be used for simulation"
+    )
+    parser.add_argument(
         "-t",
         "--threads",
         type=int,
-        default=19,
+        default=7,
         help="Number of threads to use")
     parser.add_argument(
         "abv",
@@ -79,17 +91,15 @@ def main():
                     args.abv, x)), filter(
                 lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
                     args.abv)))
-        all_info = pool.map(get_info, reference_files)
-        shortest_seq = min(all_info, key=lambda x: x[2])
-        longest_seq = max(all_info, key=lambda x: x[2])
-        print(f"shortest: {shortest_seq}")
-        print(f"longest: {longest_seq}")
-        sys.exit()
-        for res in pool.map(run_deepsim, map(lambda x: (x[0], x[1], args.deepsim_binary, args.output_dir, shortest_seq), all_info)):
-            try:
-                assert res[0]
-            except AssertionError:
-                logging.error(f"Error occurred when running Deep Simulator on {res[1]}")
+        if args.calculate_stats:
+            total_len = 0
+            for info in pool.imap(get_longest_record, reference_files):
+                total_len += info[1]
+            print(f"total bases: {total_len}")
+        else:
+            deepsim_args = map(lambda file: (file, args.deepsim_binary, args.output_dir), reference_files)
+            for _ in pool.imap(run_deepsim, deepsim_args):
+                continue
 
 if __name__ == '__main__':
     main()
