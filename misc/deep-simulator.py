@@ -15,19 +15,20 @@ def create_deepsim_bash_script(args_tuple):
 
     fasta_file = fasta_file_path.split("/")[-1]
     output_path = os.path.join(output_dir, fasta_file)
+    num_reads = round((longest_record_length / 220) * 0.008)
 
-    # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
-    # on the original file
-    if longest_record is None:
-        print(f"{deepsim_binary} -i {fasta_file_path} -o {output_path} -n {str(round(longest_record_length / 220) * 8)} -c 20 -e 1.25 -s 1.25")
+    if num_reads > 0:
+        # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
+        # on the original file
+        if longest_record is None:
+            print(f"{deepsim_binary} -i {fasta_file_path} -o {output_path} -n {num_reads} -c 20 -e 1.25 -s 1.25")
+        else:
+            temp_file = os.path.join(output_dir, fasta_file + ".tmp")
+            with open(temp_file, "w") as f:
+                SeqIO.write(longest_record, f, 'fasta')
 
-    else:
-        temp_file = os.path.join(output_dir, fasta_file + ".tmp")
-        with open(temp_file, "w") as f:
-            SeqIO.write(longest_record, f, 'fasta')
-
-        print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {str(round(longest_record_length / 220) * 8)} -c 20 -e 1.25 -s 1.25")
-        print(f"rm {temp_file}")
+            print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {num_reads} -c 20 -e 1.25 -s 1.25")
+            print(f"rm {temp_file}")
 
 
 def get_longest_record(fasta_file):
