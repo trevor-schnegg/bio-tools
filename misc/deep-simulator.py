@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import random
 import subprocess
 import sys
 from multiprocessing.pool import Pool
@@ -9,7 +8,7 @@ from multiprocessing.pool import Pool
 from Bio import SeqIO
 
 
-def run_deepsim(args_tuple):
+def create_deepsim_bash_script(args_tuple):
     fasta_file_path, deepsim_binary, output_dir = args_tuple
 
     file_info = get_longest_record(fasta_file_path)
@@ -21,16 +20,15 @@ def run_deepsim(args_tuple):
     # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
     # on the original file
     if longest_record is None:
-        subprocess.run([deepsim_binary, '-i', fasta_file_path, '-o', output_path, '-n',
-                        str(round(longest_record_length/220) * 5), '-e', "1.25", '-s', "1.25"])
+        print(f"{deepsim_binary} -i {fasta_file_path} -o {output_path} -n {str(round(longest_record_length / 220) * 5)} -e 1.25 -s 1.25")
+
     else:
         temp_file = os.path.join(output_dir, fasta_file + ".tmp")
         with open(temp_file, "w") as f:
             SeqIO.write(longest_record, f, 'fasta')
-        subprocess.run([deepsim_binary, '-i', temp_file, '-o', output_path, '-n',
-                        str(round(longest_record_length / 220) * 5), '-e', "1.25", '-s', "1.25"])
-        subprocess.run(["rm", temp_file])
 
+        print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {str(round(longest_record_length / 220) * 5)} -e 1.25 -s 1.25")
+        print(f"rm {temp_file}")
 
 
 def get_longest_record(fasta_file):
@@ -42,11 +40,11 @@ def get_longest_record(fasta_file):
             longest_record = record
         elif len(record.seq) > len(longest_record.seq):
             longest_record = record
-    return None if largest_record_index == 0 else longest_record, len(longest_record.seq)
+    return None if largest_record_index == 0 else longest_record, len(
+        longest_record.seq)
 
 
 def main():
-
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Calls Deep-Simulator to create the desired simulated reads")
@@ -97,9 +95,15 @@ def main():
                 total_len += info[1]
             print(f"total bases: {total_len}")
         else:
-            deepsim_args = map(lambda file: (file, args.deepsim_binary, args.output_dir), reference_files)
-            for _ in pool.imap(run_deepsim, deepsim_args):
+            deepsim_args = map(
+                lambda file: (
+                    file,
+                    args.deepsim_binary,
+                    args.output_dir),
+                reference_files)
+            for _ in pool.imap(create_deepsim_bash_script, deepsim_args):
                 continue
+
 
 if __name__ == '__main__':
     main()
