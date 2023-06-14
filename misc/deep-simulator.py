@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import random
 import sys
 from multiprocessing.pool import Pool
 
@@ -8,26 +9,26 @@ from Bio import SeqIO
 
 
 def create_deepsim_bash_script(args_tuple):
-    fasta_file_path, deepsim_binary, output_dir = args_tuple
+    fasta_file_path, deepsim_binary, output_dir, num_reads = args_tuple
 
     file_info = get_longest_record(fasta_file_path)
     longest_record, longest_record_length = file_info
 
     fasta_file = fasta_file_path.split("/")[-1]
     output_path = os.path.join(output_dir, fasta_file)
-    num_reads = round((longest_record_length / 220) * 0.008)
+    num_reads = num_reads if num_reads is not None else round((longest_record_length / 220) * 0.008)
 
     if num_reads > 0:
         # If the longest record is None, then there is only one record in the fasta file. We can just run Deep Simulator
         # on the original file
         if longest_record is None:
-            print(f"{deepsim_binary} -i {fasta_file_path} -o {output_path} -n {num_reads} -c 20 -e 1.25 -s 1.25")
+            print(f"{deepsim_binary} -i {fasta_file_path} -o {output_path} -n {num_reads} -c 20 -e 1.25 -S {random.randint(0, 1000000000)}")
         else:
             temp_file = os.path.join(output_dir, fasta_file + ".tmp")
             with open(temp_file, "w") as f:
                 SeqIO.write(longest_record, f, 'fasta')
 
-            print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {num_reads} -c 20 -e 1.25 -s 1.25")
+            print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {num_reads} -c 20 -e 1.25 -S {random.randint(0, 1000000000)}")
             print(f"rm {temp_file}")
 
 
@@ -54,6 +55,14 @@ def main():
         dest="calculate_stats",
         action="store_true",
         help="Option to calculate the total number of bases to be used for simulation"
+    )
+    parser.add_argument(
+        "-n",
+        "--num-reads",
+        dest="num_reads",
+        type=int,
+        default=None,
+        help="Number of reads for deep simulator to simulate. If supplied, overwrites any other calculation"
     )
     parser.add_argument(
         "-t",
@@ -99,7 +108,8 @@ def main():
                 lambda file: (
                     file,
                     args.deepsim_binary,
-                    args.output_dir),
+                    args.output_dir,
+                    args.num_reads),
                 reference_files)
             for _ in pool.imap(create_deepsim_bash_script, deepsim_args):
                 continue
