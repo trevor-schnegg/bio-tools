@@ -31,6 +31,8 @@ def create_deepsim_bash_script(args_tuple):
 
             print(f"{deepsim_binary} -i {temp_file} -o {output_path} -n {num_reads} -c 20 -S {random.randint(0, 1000000000)}\n")
             print(f"rm {temp_file}\n")
+    else:
+        logging.debug(f"{fasta_file_path} did not have a sequence long enough to simulate")
 
 
 def get_longest_record(fasta_file):
