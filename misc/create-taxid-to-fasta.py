@@ -29,6 +29,9 @@ def main():
     parser.add_argument(
         "accession2taxid",
         help="accession2taxid of abv")
+    parser.add_argument(
+        "taxonomy",
+        help="NCBI taxonomy directory")
     args = parser.parse_args()
 
     # Initialize event logger
