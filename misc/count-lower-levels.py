@@ -16,7 +16,6 @@ def get_accessions(fasta_file):
 
 
 def get_first_accession(fasta_file):
-    accessions = []
     return next(SeqIO.parse(fasta_file, 'fasta')).id
 
 
