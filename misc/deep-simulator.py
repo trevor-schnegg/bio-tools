@@ -113,7 +113,8 @@ def main():
                     args.output_dir,
                     args.num_reads),
                 reference_files)
-            for should_print, string in pool.imap(create_deepsim_bash_script, deepsim_args):
+            for should_print, string in pool.imap(
+                    create_deepsim_bash_script, deepsim_args):
                 if should_print:
                     print(string)
                 else:

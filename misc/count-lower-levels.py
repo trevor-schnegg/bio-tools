@@ -60,8 +60,12 @@ def main():
         f"Reading accession2taxid at {args.accession2taxid}")
     with open(args.accession2taxid, 'r') as accession2taxid_file:
         for line in accession2taxid_file:
-            formatted_line = line.strip().split(' ')
-            accession2taxid[formatted_line[0]] = formatted_line[4]
+            line = line.strip()
+            if line.__contains__("\t"):
+                split_line = line.split("\t")
+            else:
+                split_line = line.split(" ")
+            accession2taxid[split_line[0]] = split_line[-1]
     logging.info("Done reading accession2taxid!")
 
     # Read in taxonomy

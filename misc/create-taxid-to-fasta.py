@@ -64,7 +64,8 @@ def main():
                     args.abv, x)), filter(
                 lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
                     args.abv)))
-        for fasta_path, first_accession in pool.imap(get_first_accession, reference_files):
+        for fasta_path, first_accession in pool.imap(
+                get_first_accession, reference_files):
             print(f"{accession2taxid[first_accession]} {fasta_path}")
 
 
