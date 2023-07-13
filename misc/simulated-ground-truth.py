@@ -9,11 +9,14 @@ from multiprocessing.pool import Pool
 def get_readids(file_and_taxid):
     deepsimulator_fasta_dir, taxid = file_and_taxid
     readids = []
-    with open(deepsimulator_fasta_dir + "/files.txt", 'r') as f:
-        for line in f.readlines():
-            prefix = line.strip().split('.')[0]
-            readids.append(prefix.split('_')[-1])
-    return readids, taxid
+    if os.path.isfile(deepsimulator_fasta_dir + "/files.txt"):
+        with open(deepsimulator_fasta_dir + "/files.txt", 'r') as f:
+            for line in f.readlines():
+                prefix = line.strip().split('.')[0]
+                readids.append(prefix.split('_')[-1])
+        return readids, taxid
+    else:
+        return None, taxid
 
 
 def main():
@@ -51,11 +54,12 @@ def main():
         lambda x, y: (
             args.deepsimulator_references + x, y), fastas_and_taxids)
 
-    logging.info(f"Looping through reference files in {args.abv}")
+    logging.info("Looping through deep simulator outputs")
     with Pool(args.threads) as pool:
         for readids, taxid in pool.imap(get_readids, fastas_and_taxids):
-            for readid in readids:
-                print(f"{readid}\t{taxid}")
+            if readids is not None:
+                for readid in readids:
+                    print(f"{readid}\t{taxid}")
 
 
 if __name__ == '__main__':
