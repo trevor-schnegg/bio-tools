@@ -51,8 +51,8 @@ def main():
             line = line.strip().split(' ')
             fastas_and_taxids.append((line[1].split("/")[-1], line[0]))
     fastas_and_taxids = map(
-        lambda x, y: (
-            args.deepsimulator_references + x, y), fastas_and_taxids)
+        lambda x: (
+            args.deepsimulator_references + x[0], x[1]), fastas_and_taxids)
 
     logging.info("Looping through deep simulator outputs")
     with Pool(args.threads) as pool:
