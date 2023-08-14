@@ -83,7 +83,7 @@ def main():
 
     # Compute the desired statistics for each tax id
     logging.info("Computing statistics")
-    evaluation_levels = ["genus", "species", "strain"]
+    evaluation_levels = ["genus", "species"]
     stats = {}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
