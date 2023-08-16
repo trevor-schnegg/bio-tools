@@ -40,6 +40,12 @@ def main():
         default=None,
         help="The name of the classifier whose accuracy is being evaluated")
     parser.add_argument(
+        "-y",
+        "--yeast-unclassified",
+        dest="yeast_unclassified",
+        default=None,
+        help="If specified, outputs the yeast and unclassified data to the file name provided")
+    parser.add_argument(
         "taxonomy",
         help="NCBI taxonomy directory")
     parser.add_argument(
@@ -84,16 +90,31 @@ def main():
     # Compute the desired statistics for each tax id
     logging.info("Computing statistics")
     evaluation_levels = ["genus", "species"]
-    stats = {}
+    stats = {"yeast_total": 0, "yeast_fp": 0, "unclassified_total": 0, "unclassified_fp": 0}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
         stats[level + "_tp"] = 0
         stats[level + "_fp"] = 0
         stats[level + "_fn"] = 0
     for _, values in ground_truth_readid2taxid.iterrows():
+        # If the ground truth tax id is 0, the read was unclassified according to minimap2
         if values["taxid"] == 0:
-            # If the tax id of the ground truth is 0, ignore this read
-            continue
+            stats["unclassified_total"] += 1
+            # Get the predicted tax id
+            prediction = get_taxid_of_readid(
+                predicted_readid2taxid, values["readid"])
+            if prediction != 0:
+                stats["unclassified_fp"] += 1
+
+        # If the ground truth tax id value is either of the two yeast tax ids
+        elif values["taxid"] == 5207 or values["taxid"] == 4932:
+            stats["yeast_total"] += 1
+            # Get the predicted tax id
+            prediction = get_taxid_of_readid(
+                predicted_readid2taxid, values["readid"])
+            if prediction != 0:
+                stats["yeast_fp"] += 1
+
         else:
             # Get ground truth value and lineage
             ground_truth = values["taxid"]
@@ -162,6 +183,7 @@ def main():
         for stat in statistics:
             for level in evaluation_levels:
                 header_string += f"\t{level + '_' + stat}"
+        header_string += "\tyeast_fp_pct\tunclassified_fp_pct"
         print(header_string.strip())
 
     # Print statistics
@@ -170,7 +192,6 @@ def main():
         report_string = args.classifier_name
     for stat in statistics:
         for level in evaluation_levels:
-            total = stats[level + "_total"]
             true_postives = stats[level + "_tp"]
             if stat == "precision":
                 report_string += f'\t{true_postives/(true_postives + stats[level + "_fp"])}'
@@ -178,6 +199,7 @@ def main():
                 report_string += f'\t{true_postives/(true_postives + stats[level + "_fn"])}'
             elif stat == "accuracy":
                 report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
+    report_string += f"\t{str(stats['yeast_fp']/stats['yeast_total'])}\t{str(stats['unclassified_fp']/stats['unclassified_total'])}"
     print(report_string.strip())
 
 

@@ -8,6 +8,10 @@ import pandas as pd
 def tab_separated_list(values) -> str:
     string = ""
     for idx, value in enumerate(values):
+        # If this is CLARK, switch NA to 0
+        if value == "NA":
+            value = "0"
+
         if idx == 0:
             string += value
         else:

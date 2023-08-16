@@ -34,8 +34,6 @@ def main():
         format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
         datefmt='%m-%d-%Y %I:%M:%S%p')
 
-    logging.debug(f"{args}")
-
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
     taxonomy = Taxonomy.from_ncbi(args.taxonomy)
