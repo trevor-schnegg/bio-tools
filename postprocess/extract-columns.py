@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from collections import defaultdict
 
 import pandas as pd
 
@@ -40,7 +41,7 @@ def main():
     parser.add_argument(
         "columns",
         type=str,
-        help="Comma separated list of columns to output (starting index at 1) "
+        help="Comma separated list of columns to output (0 indexed) "
              "(E.g. 4,6,1 will output 4<tab>6<tab>1)")
     args = parser.parse_args()
     columns = list(map(lambda x: int(x), args.columns.split(",")))
@@ -54,12 +55,16 @@ def main():
 
     # Read the TSV
     logging.info(f"Reading input table for columns {str(columns)}")
+    types = defaultdict(str)
     input_table = pd.read_table(
         args.file,
         delimiter="," if args.clark else None,
         skiprows=1 if args.skip_header else None,
         header=None,
+        dtype=types,
+        keep_default_na=False,
         usecols=columns)
+    logging.info("Sorting table on first column")
     input_table.sort_values(columns[0], inplace=True)
     logging.info("Table read!")
 
@@ -67,7 +72,7 @@ def main():
     # Output the desired columns
     for line in input_table.iterrows():
         # line is a tuple of (row_number, {column: value})
-        print(tab_separated_list(map(lambda x: str(line[1][x]), columns)))
+        print(tab_separated_list(map(lambda x: line[1][x], columns)))
     logging.info("Done!")
 
 
