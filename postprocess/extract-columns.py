@@ -66,6 +66,7 @@ def main():
         header=None,
         dtype=types,
         na_values=None,
+        keep_default_na=False,
         usecols=columns)
     logging.info("Sorting table on first column")
     input_table.sort_values(columns[0], inplace=True)
