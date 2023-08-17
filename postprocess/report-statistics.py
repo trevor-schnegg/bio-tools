@@ -9,7 +9,7 @@ def get_readid2taxid(filename):
     with open(filename, 'r') as f:
         for line in f.readlines():
             line = line.strip().split('\t')
-            readid2taxid[line[0]] = line[1]
+            readid2taxid[line[0]] = int(line[1])
     return readid2taxid
 
 def main():
