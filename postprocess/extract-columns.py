@@ -64,7 +64,8 @@ def main():
         delimiter="," if args.clark else None,
         skiprows=1 if args.skip_header else None,
         header=None,
-        dtype=object,
+        dtype=types,
+        na_values=None,
         usecols=columns)
     logging.info("Sorting table on first column")
     input_table.sort_values(columns[0], inplace=True)
