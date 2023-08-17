@@ -25,6 +25,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Outputs a tsv of the input columns")
     parser.add_argument(
+        "-c",
+        "--clark",
+        dest="clark",
+        action="store_true",
+        help="If the output is CLARK, we need to split on commas, not tabs")
+    parser.add_argument(
         "-s",
         "--skip-header",
         dest="skip_header",
@@ -34,7 +40,7 @@ def main():
     parser.add_argument(
         "columns",
         type=str,
-        help="Comma separated list of columns to output"
+        help="Comma separated list of columns to output (starting index at 1) "
              "(E.g. 4,6,1 will output 4<tab>6<tab>1)")
     args = parser.parse_args()
     columns = list(map(lambda x: int(x), args.columns.split(",")))
@@ -50,6 +56,7 @@ def main():
     logging.info(f"Reading input table for columns {str(columns)}")
     input_table = pd.read_table(
         args.file,
+        delimiter="," if args.clark else None,
         skiprows=1 if args.skip_header else None,
         header=None,
         usecols=columns)
