@@ -2,18 +2,15 @@ import argparse
 import logging
 import sys
 
-import pandas as pd
 from taxonomy.taxonomy import Taxonomy
 
-
-def get_taxid_of_readid(dataframe: pd.DataFrame, readid: str):
-    try:
-        taxid = dataframe.loc[dataframe["readid"] == readid]["taxid"].values[0]
-    except IndexError:
-        return 0
-    else:
-        return taxid
-
+def get_readid2taxid(filename):
+    readid2taxid = {}
+    with open(filename, 'r') as f:
+        for line in f.readlines():
+            line = line.strip().split('\t')
+            readid2taxid[line[0]] = line[1]
+    return readid2taxid
 
 def main():
     # Parse arguments from command line
@@ -40,12 +37,6 @@ def main():
         default=None,
         help="The name of the classifier whose accuracy is being evaluated")
     parser.add_argument(
-        "-y",
-        "--yeast-unclassified",
-        dest="yeast_unclassified",
-        default=None,
-        help="If specified, outputs the yeast and unclassified data to the file name provided")
-    parser.add_argument(
         "taxonomy",
         help="NCBI taxonomy directory")
     parser.add_argument(
@@ -71,20 +62,10 @@ def main():
     logging.info(
         f"Reading ground_truth_readid2taxid at {args.ground_truth_readid2taxid}")
     # Read both readid2taxids
-    ground_truth_readid2taxid = pd.read_table(
-        args.ground_truth_readid2taxid,
-        names=["readid", "taxid"],
-        dtype={
-            'readid': 'string',
-            'taxid': 'int'})
+    ground_truth_readid2taxid = get_readid2taxid(args.ground_truth_readid2taxid)
     logging.info(
         f"Reading predicted_readid2taxid at {args.predicted_readid2taxid}")
-    predicted_readid2taxid = pd.read_table(
-        args.predicted_readid2taxid,
-        names=["readid", "taxid"],
-        dtype={
-            'readid': 'string',
-            'taxid': 'int'})
+    predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
     logging.info("Both readid2taxids read!")
 
     # Compute the desired statistics for each tax id
@@ -96,28 +77,26 @@ def main():
         stats[level + "_tp"] = 0
         stats[level + "_fp"] = 0
         stats[level + "_fn"] = 0
-    for _, values in ground_truth_readid2taxid.iterrows():
+    for readid, taxid in ground_truth_readid2taxid.items():
         # If the ground truth tax id is 0, the read was unclassified according to minimap2
-        if values["taxid"] == 0:
+        if taxid == 0:
             stats["unclassified_total"] += 1
             # Get the predicted tax id
-            prediction = get_taxid_of_readid(
-                predicted_readid2taxid, values["readid"])
+            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
             if prediction != 0:
                 stats["unclassified_fp"] += 1
 
         # If the ground truth tax id value is either of the two yeast tax ids
-        elif values["taxid"] == 5207 or values["taxid"] == 4932:
+        elif taxid == 5207 or taxid == 4932:
             stats["yeast_total"] += 1
             # Get the predicted tax id
-            prediction = get_taxid_of_readid(
-                predicted_readid2taxid, values["readid"])
+            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
             if prediction != 0:
                 stats["yeast_fp"] += 1
 
         else:
             # Get ground truth value and lineage
-            ground_truth = values["taxid"]
+            ground_truth = taxid
             ground_truth_lineage = list(
                 filter(
                     lambda x: True if x.rank in evaluation_levels else False,
@@ -130,8 +109,7 @@ def main():
                 stats[node.rank + "_total"] += 1
 
             # Get the predicted tax id
-            prediction = get_taxid_of_readid(
-                predicted_readid2taxid, values["readid"])
+            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
 
             # If the predicted tax id is 0, it has no lineage and will throw an error
             # Therefore, increment false negative counts and continue
