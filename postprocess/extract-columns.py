@@ -5,13 +5,37 @@ from collections import defaultdict
 
 import pandas as pd
 
+def get_readid2taxid(filename):
+    readid2taxid = {}
+    with open(filename, 'r') as f:
+        for line in f.readlines():
+            line = line.strip().split('\t')
+            readid2taxid[line[0]] = int(line[1])
+    return readid2taxid
 
-def tab_separated_list(values) -> str:
+def tab_separated_list(values, krakenuniq: str) -> str:
     string = ""
+    krakenuniq_taxid2accession = ""
+    accession2taxid = ""
+    if krakenuniq is not None:
+        args = krakenuniq.strip().split(",")
+        krakenuniq_taxid2accession = get_readid2taxid(args[0])
+        krakenuniq_taxid2accession = dict(reversed(list(krakenuniq_taxid2accession.items())))
+        accession2taxid = get_readid2taxid(args[1])
+
     for idx, value in enumerate(values):
         # If this is CLARK, switch NA to 0
         if value == "NA":
             value = "0"
+
+        # If this is krakenuniq, substitute the assigned taxid for the real one
+        if krakenuniq is not None:
+            try:
+                value = int(value)
+            except ValueError:
+                value = value
+            else:
+                value = str(accession2taxid[krakenuniq_taxid2accession[value]])
 
         if idx == 0:
             string += value
@@ -21,7 +45,6 @@ def tab_separated_list(values) -> str:
 
 
 def main():
-
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Outputs a tsv of the input columns")
@@ -37,6 +60,12 @@ def main():
         dest="skip_header",
         action="store_true",
         help="Skip the first line of the input file")
+    parser.add_argument(
+        "-u",
+         "--krakenuniq",
+        dest="krakenuniq",
+        default=None,
+        help="The seqid2taxid.map file provided by krakenuniq and the accession2taxid mapping for the dataset")
     parser.add_argument("file", help="TSV file to extract columns from")
     parser.add_argument(
         "columns",
@@ -68,15 +97,15 @@ def main():
         na_values=None,
         keep_default_na=False,
         usecols=columns)
-    logging.info("Sorting table on first column")
-    input_table.sort_values(columns[0], inplace=True)
-    logging.info("Table read!")
+    # logging.info("Sorting table on first column")
+    # input_table.sort_values(columns[0], inplace=True)
+    # logging.info("Table read!")
 
     logging.info("Outputting desired columns")
     # Output the desired columns
     for line in input_table.iterrows():
         # line is a tuple of (row_number, {column: value})
-        print(tab_separated_list(map(lambda x: line[1][x], columns)))
+        print(tab_separated_list(map(lambda x: line[1][x], columns), args.krakenuniq))
     logging.info("Done!")
 
 
