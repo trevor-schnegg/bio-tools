@@ -58,8 +58,11 @@ def main():
             value = line[1]
             if args.clark and value == "NA":
                 value = "0"
-            elif krakenuniq_taxid2taxid is not None and value != "0":
-                value = str(krakenuniq_taxid2taxid[int(value)])
+            elif krakenuniq_taxid2taxid is not None:
+                value = int(value)
+                if value > 1000000000:
+                    value = krakenuniq_taxid2taxid[value]
+                value = str(value)
             print(f"{readid}\t{value}")
 
     logging.info("Done reformatting!")
