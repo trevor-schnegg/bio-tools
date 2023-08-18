@@ -4,6 +4,7 @@ import sys
 
 from taxonomy.taxonomy import Taxonomy
 
+
 def get_readid2taxid(filename):
     readid2taxid = {}
     with open(filename, 'r') as f:
@@ -11,6 +12,7 @@ def get_readid2taxid(filename):
             line = line.strip().split('\t')
             readid2taxid[line[0]] = int(line[1])
     return readid2taxid
+
 
 def main():
     # Parse arguments from command line
@@ -62,7 +64,8 @@ def main():
     logging.info(
         f"Reading ground_truth_readid2taxid at {args.ground_truth_readid2taxid}")
     # Read both readid2taxids
-    ground_truth_readid2taxid = get_readid2taxid(args.ground_truth_readid2taxid)
+    ground_truth_readid2taxid = get_readid2taxid(
+        args.ground_truth_readid2taxid)
     logging.info(
         f"Reading predicted_readid2taxid at {args.predicted_readid2taxid}")
     predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
@@ -71,14 +74,19 @@ def main():
     # Compute the desired statistics for each tax id
     logging.info("Computing statistics")
     evaluation_levels = ["genus", "species"]
-    stats = {"yeast_total": 0, "yeast_fp": 0, "unclassified_total": 0, "unclassified_fp": 0}
+    stats = {
+        "yeast_total": 0,
+        "yeast_fp": 0,
+        "unclassified_total": 0,
+        "unclassified_fp": 0}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
         stats[level + "_tp"] = 0
         stats[level + "_fp"] = 0
         stats[level + "_fn"] = 0
     for readid, taxid in ground_truth_readid2taxid.items():
-        # If the ground truth tax id is 0, the read was unclassified according to minimap2
+        # If the ground truth tax id is 0, the read was unclassified according
+        # to minimap2
         if taxid == 0:
             stats["unclassified_total"] += 1
             # Get the predicted tax id
