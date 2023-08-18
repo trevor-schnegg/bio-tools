@@ -58,7 +58,7 @@ def main():
             value = line[1]
             if args.clark and value == "NA":
                 value = "0"
-            elif krakenuniq_taxid2taxid is not None:
+            elif krakenuniq_taxid2taxid is not None and value != "0":
                 value = str(krakenuniq_taxid2taxid[int(value)])
             print(f"{readid}\t{value}")
 
