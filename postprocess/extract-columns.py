@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import pandas as pd
 
+
 def get_readid2taxid(filename):
     readid2taxid = {}
     with open(filename, 'r') as f:
@@ -13,29 +14,28 @@ def get_readid2taxid(filename):
             readid2taxid[line[0]] = int(line[1])
     return readid2taxid
 
-def tab_separated_list(values, krakenuniq: str) -> str:
+
+def tab_separated_list(values, krakenuniq_map) -> str:
     string = ""
-    krakenuniq_taxid2accession = ""
-    accession2taxid = ""
-    if krakenuniq is not None:
-        args = krakenuniq.strip().split(",")
-        krakenuniq_taxid2accession = get_readid2taxid(args[0])
-        krakenuniq_taxid2accession = dict(reversed(list(krakenuniq_taxid2accession.items())))
-        accession2taxid = get_readid2taxid(args[1])
+    krakenuniq_map_orig = ""
+    if krakenuniq_map is not None:
+        krakenuniq_map_orig = get_readid2taxid(krakenuniq_map + ".orig")
+        krakenuniq_map = dict(reversed(list(krakenuniq_map.items())))
 
     for idx, value in enumerate(values):
         # If this is CLARK, switch NA to 0
         if value == "NA":
             value = "0"
 
-        # If this is krakenuniq, substitute the assigned taxid for the real one
-        if krakenuniq is not None:
+        # If this is krakenuniq, substitute the assigned tax id for the real one
+        if krakenuniq_map is not None:
             try:
                 value = int(value)
             except ValueError:
+                # If the value isn't an integer, then it is a read id and it stays the same
                 value = value
             else:
-                value = str(accession2taxid[krakenuniq_taxid2accession[value]])
+                value = str(krakenuniq_map_orig[krakenuniq_map[value]])
 
         if idx == 0:
             string += value
@@ -63,7 +63,7 @@ def main():
     parser.add_argument(
         "-u",
          "--krakenuniq",
-        dest="krakenuniq",
+        dest="krakenuniq_map",
         default=None,
         help="The seqid2taxid.map file provided by krakenuniq and the accession2taxid mapping for the dataset")
     parser.add_argument("file", help="TSV file to extract columns from")
@@ -105,7 +105,7 @@ def main():
     # Output the desired columns
     for line in input_table.iterrows():
         # line is a tuple of (row_number, {column: value})
-        print(tab_separated_list(map(lambda x: line[1][x], columns), args.krakenuniq))
+        print(tab_separated_list(map(lambda x: line[1][x], columns), args.krakenuniq_map))
     logging.info("Done!")
 
 
