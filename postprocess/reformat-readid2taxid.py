@@ -12,10 +12,10 @@ def get_readid2taxid(filename):
     return readid2taxid
 
 def get_krakenuniq_readid2readid(filename):
-    krakenuniq_taxid2accession = dict(reversed(list(get_readid2taxid(filename).items())))
+    krakenuniq_accession2taxid = get_readid2taxid(filename)
     accession2taxid = get_readid2taxid(filename + ".orig")
     taxid2taxid = {}
-    for taxid, accession in krakenuniq_taxid2accession.items():
+    for accession, taxid in krakenuniq_accession2taxid.items():
         real_taxid = accession2taxid[accession]
         taxid2taxid[taxid] = real_taxid
     return taxid2taxid
