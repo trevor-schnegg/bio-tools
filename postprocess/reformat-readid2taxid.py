@@ -62,6 +62,8 @@ def main():
                 value = str(krakenuniq_taxid2taxid[int(value)])
             print(f"{readid}\t{value}")
 
+    logging.info("Done reformatting!")
+
 
 if __name__ == '__main__':
     main()

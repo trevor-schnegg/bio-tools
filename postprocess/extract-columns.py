@@ -52,7 +52,7 @@ def main():
                     acc += ("\t" + line[column])
             print(acc)
 
-    logging.info("Done!")
+    logging.info("Done outputting columns!")
 
 
 if __name__ == '__main__':

@@ -59,20 +59,19 @@ def main():
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
     taxonomy: Taxonomy = Taxonomy.from_ncbi(args.taxonomy)
-    logging.info("Taxonomy read!")
 
     logging.info(
-        f"Reading ground_truth_readid2taxid at {args.ground_truth_readid2taxid}")
+        f"Reading ground truth readid2taxid from {args.ground_truth_readid2taxid}")
     # Read both readid2taxids
     ground_truth_readid2taxid = get_readid2taxid(
         args.ground_truth_readid2taxid)
     logging.info(
-        f"Reading predicted_readid2taxid at {args.predicted_readid2taxid}")
+        f"Reading predicted readid2taxid from {args.predicted_readid2taxid}")
     predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
     logging.info("Both readid2taxids read!")
 
     # Compute the desired statistics for each tax id
-    logging.info("Computing statistics")
+    logging.info("Computing statistics, this may take a few minutes...")
     evaluation_levels = ["genus", "species"]
     stats = {
         "yeast_total": 0,
@@ -187,6 +186,8 @@ def main():
                 report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
     report_string += f"\t{str(stats['yeast_fp']/stats['yeast_total'])}\t{str(stats['unclassified_fp']/stats['unclassified_total'])}"
     print(report_string.strip())
+
+    logging.info("Done reporting statistics!")
 
 
 if __name__ == '__main__':
