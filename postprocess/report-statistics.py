@@ -104,16 +104,14 @@ def main():
         else:
             # Get ground truth value and lineage
             ground_truth = taxid
-            ground_truth_lineage = list(
-                filter(
-                    lambda x: True if x.rank in evaluation_levels else False,
-                    taxonomy.lineage(
-                        str(ground_truth))))
-            ground_truth_lineage.reverse()
+            ground_truth_lineage = []
+            for tax_level in evaluation_levels:
+                ground_truth_lineage.append(taxonomy.parent(str(ground_truth), at_rank=tax_level))
 
             # Increment the ground truth total numbers immediately
             for node in ground_truth_lineage:
-                stats[node.rank + "_total"] += 1
+                if node is not None:
+                    stats[node.rank + "_total"] += 1
 
             # Get the predicted tax id
             prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
@@ -122,30 +120,29 @@ def main():
             # Therefore, increment false negative counts and continue
             if prediction == 0:
                 for node in ground_truth_lineage:
-                    stats[node.rank + "_fn"] += 1
+                    if node is not None:
+                        stats[node.rank + "_fn"] += 1
                 continue
 
             # Get the lineage for the predicted tax id
-            prediction_lineage = list(
-                filter(
-                    lambda x: True if x.rank in evaluation_levels else False,
-                    taxonomy.lineage(
-                        str(prediction))))
-            prediction_lineage.reverse()
+            prediction_lineage = []
+            for tax_level in evaluation_levels:
+                prediction_lineage.append(taxonomy.parent(str(prediction), at_rank=tax_level))
 
             # Ignores classifier assignments that are more specific than the
             # ground truth
-            for index, true_node in enumerate(ground_truth_lineage):
-                try:
-                    predicted_node = prediction_lineage[index]
-                except IndexError:
-                    stats[true_node.rank + "_fn"] += 1
+            for true_node, predicted_node in zip(ground_truth_lineage, prediction_lineage):
+                if true_node is None:
+                    continue
                 else:
-                    assert true_node.rank == predicted_node.rank
-                    if true_node.id == predicted_node.id:
-                        stats[true_node.rank + "_tp"] += 1
+                    if predicted_node is None:
+                        stats[true_node.rank + "_fn"] += 1
                     else:
-                        stats[true_node.rank + "_fp"] += 1
+                        assert true_node.rank == predicted_node.rank
+                        if true_node.id == predicted_node.id:
+                            stats[true_node.rank + "_tp"] += 1
+                        else:
+                            stats[true_node.rank + "_fp"] += 1
 
     # Print formulas if needed
     if args.give_formulas:
