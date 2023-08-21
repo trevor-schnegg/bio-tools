@@ -135,15 +135,10 @@ def main():
 
             # Ignores classifier assignments that are more specific than the
             # ground truth
-            is_predicted_shorter = False
             for index, true_node in enumerate(ground_truth_lineage):
                 try:
-                    if is_predicted_shorter:
-                        stats[true_node.rank + "_fn"] += 1
-                        continue
                     predicted_node = prediction_lineage[index]
                 except IndexError:
-                    is_predicted_shorter = True
                     stats[true_node.rank + "_fn"] += 1
                 else:
                     assert true_node.rank == predicted_node.rank
