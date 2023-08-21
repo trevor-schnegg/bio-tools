@@ -64,7 +64,7 @@ def main():
 
     logging.info("Computing the LCA of all reads")
     for read_id, tax_ids in readid2taxid.items():
-        lca = lca_of_taxids(tax_ids)
+        lca = lca_of_taxids(tax_ids, taxonomy)
         print(f"{read_id}\t{lca}")
 
     logging.info("Done!")
