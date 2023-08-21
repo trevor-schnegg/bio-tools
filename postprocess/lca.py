@@ -9,11 +9,26 @@ from taxonomy.taxonomy import Taxonomy
 def lca_of_taxids(taxids, taxonomy: Taxonomy) -> str:
     lca = ""
     for idx, taxid in enumerate(taxids):
+        if taxid == 0:
+            return "0"
+
         if idx == 0:
             lca = str(taxid)
         else:
             lca = taxonomy.lca(lca, str(taxid)).id
     return lca
+
+def get_readid2taxid_for_lca(filename):
+    readid2taxid = {}
+    with open(filename, 'r') as f:
+        for line in f.readlines():
+            line = line.strip().split('\t')
+            read_id = line[0]
+            if read_id in readid2taxid:
+                readid2taxid[read_id].append(int(line[1]))
+            else:
+                readid2taxid[read_id] = [int(line[1])]
+    return readid2taxid
 
 
 def main():
@@ -44,35 +59,14 @@ def main():
 
     logging.info(f"Reading readid2taxid at {args.readid2taxid}")
     # Read readid2taxid
-    readid2taxid = pd.read_table(
-        args.readid2taxid,
-        names=["readid", "taxid"],
-        dtype={
-            'readid': 'string',
-            'taxid': 'int'})
-    readid2taxid.sort_values("readid", inplace=True)
+    readid2taxid = get_readid2taxid_for_lca(args.readid2taxid)
     logging.info("Readid2taxid read!")
 
-    logging.info("Making sure all reads only have one tax id")
-    last_readid = ""
-    last_readid_taxids = set()
-    for _, (readid, taxid) in readid2taxid.iterrows():
+    logging.info("Computing the LCA of all reads")
+    for read_id, tax_ids in readid2taxid:
+        lca = lca_of_taxids(tax_ids)
+        print(f"{read_id}\t{lca}")
 
-        if last_readid == readid or last_readid == "":
-            # Haven't gathered all information for this read yet
-            last_readid = readid
-            last_readid_taxids.add(taxid)
-            continue
-        else:
-            # This is a new read
-            lca = lca_of_taxids(last_readid_taxids, taxonomy)
-            print(f"{last_readid}\t{lca}")
-
-            last_readid = readid
-            last_readid_taxids.clear()
-            last_readid_taxids.add(taxid)
-    lca = lca_of_taxids(last_readid_taxids, taxonomy)
-    print(f"{last_readid}\t{lca}")
     logging.info("Done!")
 
 
