@@ -176,7 +176,8 @@ def main():
                 report_string += f'\t{true_postives/(true_postives + stats[level + "_fn"])}'
             elif stat == "accuracy":
                 report_string += f'\t{true_postives / (true_postives + stats[level + "_fp"] + stats[level + "_fn"])}'
-    report_string += f"\t{str(stats['yeast_fp']/stats['yeast_total'])}\t{str(stats['unclassified_fp']/stats['unclassified_total'])}"
+    report_string += (f"\t{str(stats['yeast_fp']/stats['yeast_total'] if stats['yeast_total'] != 0 else 'NA')}\t"
+                      f"{str(stats['unclassified_fp']/stats['unclassified_total']) if stats['unclassified_total'] != 0 else 'NA'}")
     print(report_string.strip())
 
     logging.info("Done reporting statistics!")
