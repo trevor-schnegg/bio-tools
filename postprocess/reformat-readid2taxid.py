@@ -59,12 +59,14 @@ def main():
         help="<ref_content.txt>,<seqid2taxid> -- ref_content.txt provided by kASA's database")
     parser.add_argument("file", help="read id to tax id file to reformat")
     args = parser.parse_args()
-    krakenuniq_taxid2taxid = None if args.krakenuniq_map is None else get_krakenuniq_taxid2taxid(args.krakenuniq_map)
+    krakenuniq_taxid2taxid = None if args.krakenuniq_map is None else get_krakenuniq_taxid2taxid(
+        args.krakenuniq_map)
     kasa_files = None
     if args.kasa_map_and_seqid2taxid is not None:
         split_files = list(args.kasa_map_and_seqid2taxid.split(","))
         kasa_files = (split_files[0], split_files[1])
-    kasa_taxid2taxid = None if args.kasa_map_and_seqid2taxid is None else get_kasa_taxid2taxid(kasa_files[0], kasa_files[1])
+    kasa_taxid2taxid = None if args.kasa_map_and_seqid2taxid is None else get_kasa_taxid2taxid(
+        kasa_files[0], kasa_files[1])
 
     # Initialize event logger
     logging.basicConfig(

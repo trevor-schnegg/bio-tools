@@ -18,6 +18,7 @@ def lca_of_taxids(taxids, taxonomy: Taxonomy) -> str:
             lca = taxonomy.lca(lca, str(taxid)).id
     return lca
 
+
 def get_readid2taxid_for_lca(filename):
     readid2taxid = {}
     with open(filename, 'r') as f:
