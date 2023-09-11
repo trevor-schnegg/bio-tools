@@ -25,7 +25,7 @@ def main():
     length2count = {}
     longest_length = 0
     logging.info(f"Printing all sequence lengths from {args.fastq_file}")
-    for record in SeqIO.parse(args.fastq_file, "fasta"):
+    for record in SeqIO.parse(args.fasta_file, "fasta"):
         length = len(record.seq)
         if length > longest_length:
             longest_length = length
