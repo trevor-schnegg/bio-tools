@@ -199,8 +199,7 @@ def main():
         species_tn = (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
 
     print(
-        f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_tp/(genus_tp+genus_fn))}"
-        f"\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_tp/species_fn)}")
+        f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_tp/(genus_tp+genus_fn))}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_tp/(species_tp+species_fn))}")
     print(f"{genus_fp}\t{genus_tn}\t\t\t{species_fp}\t{species_tn}")
     print(
         f"{str(genus_tp/(genus_tp+eval(genus_fp)))}"
