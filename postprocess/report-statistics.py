@@ -77,7 +77,7 @@ def main():
     logging.info("Both readid2taxids read!")
 
     # Compute the desired statistics for each tax id
-    logging.info("Computing statistics, this may take a few minutes...")
+    logging.info("Computing statistics, this usually takes about 15 seconds...")
     evaluation_levels = ["genus", "species"]
     stats = {
         "yeast_tn": 0,
