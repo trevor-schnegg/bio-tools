@@ -1,7 +1,8 @@
 import argparse
 import logging
+import os
 import sys
-
+from Bio import SeqIO
 
 def get_accession2taxid(file):
     accession2taxid = {}
@@ -26,13 +27,13 @@ def get_accession2taxid(file):
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Takes the .custom.fileToAccssnTaxID file from CLARK and updates the tax ids according to a accession2taxid")
+        description="Creates a file to taxid mapping")
     parser.add_argument(
         "accession2taxid",
         help="accession2taxid of reference file")
     parser.add_argument(
-        "file_to_accession_taxid",
-        help=".custom.fileToAccssnTaxID from CLARK")
+        "reference_sequences",
+        help="a file directory containing reference sequences")
     args = parser.parse_args()
 
     # Initialize event logger
@@ -48,10 +49,18 @@ def main():
     accession2taxid = get_accession2taxid(args.accession2taxid)
     logging.info("Done reading accession2taxid!")
 
-    with open(args.file_to_accession_taxid, 'r') as f:
-        for line in f:
-            line = line.strip().split("\t")
-            print(f"{line[0]}\t{line[1]}\t{accession2taxid[line[1]]}")
+    files_and_taxids = []
+    for i, file in enumerate(os.listdir(args.reference_sequences)):
+        if i % 1000 == 0 and i != 0:
+            logging.info(f"{str(i)} files processed")
+        file = os.path.join(args.reference_sequences, file)
+        if os.path.isfile(file):
+            if file.endswith(".fasta") or file.endswith(".fna"):
+                first = next(SeqIO.parse(file, 'fasta'))
+                files_and_taxids.append((file, accession2taxid[first.id.split('.')[0]]))
+    files_and_taxids.sort(key=lambda x: x[1])
+    for file, taxid in files_and_taxids:
+        print(f"{file}\t{taxid}")
 
 
 if __name__ == '__main__':

@@ -2,7 +2,6 @@ import argparse
 import logging
 import sys
 
-import pandas as pd
 from taxonomy.taxonomy import Taxonomy
 
 
