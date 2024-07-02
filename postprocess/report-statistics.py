@@ -33,11 +33,11 @@ def main():
         action="store_true",
         help="Prints the header line before the output")
     parser.add_argument(
-        "-y",
-        "--yeast-in-reference",
-        dest="yeast_in_reference",
+        "-u",
+        "--ignore-unclassified",
+        dest="ignore_unclassified",
         action="store_true",
-        help="Include this option if the yeast was in the reference database for the classifier")
+        help="Include this option if you want to exclude reads unclassified by the ground truth")
     parser.add_argument(
         "-c",
         "--classifier-name",
@@ -102,7 +102,7 @@ def main():
                 stats["unclassified_fp"] += 1
 
         # If the ground truth tax id value is either of the two yeast tax ids
-        elif not args.yeast_in_reference and taxid == 5207 or taxid == 4932:
+        elif taxid == 5207 or taxid == 4932:
             # Get the predicted tax id
             prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
             if prediction == 0:
@@ -182,21 +182,22 @@ def main():
         print(args.classifier_name)
     else:
         print("<No classifier name provided>")
+
     genus_tp, genus_fn, genus_fp, genus_tn = stats["genus_tp"], stats["genus_fn"], str(
         stats['genus_fp']), ""
     species_tp, species_fn, species_fp, species_tn = stats["species_tp"], stats["species_fn"], str(
         stats['species_fp']), ""
 
-    if args.yeast_in_reference:
-        genus_fp += ("+" + str(stats["unclassified_fp"]))
-        genus_tn = str(stats["unclassified_tn"])
-        species_fp += ("+" + str(stats["unclassified_fp"]))
-        species_tn = str(stats["unclassified_tn"])
+    if args.ignore_unclassified:
+        genus_fp += ("+" + str(stats["yeast_fp"]))
+        genus_tn += str(stats["yeast_tn"])
+        species_fp += ("+" + str(stats["yeast_fp"]))
+        species_tn += str(stats["yeast_tn"])
     else:
         genus_fp += ("+" + str(stats["yeast_fp"]) + "+" + str(stats["unclassified_fp"]))
-        genus_tn = (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
+        genus_tn += (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
         species_fp += ("+" + str(stats["yeast_fp"]) + "+" + str(stats["unclassified_fp"]))
-        species_tn = (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
+        species_tn += (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
 
     print(
         f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_tp/(genus_tp+genus_fn))}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_tp/(species_tp+species_fn))}")
