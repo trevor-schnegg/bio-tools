@@ -8,9 +8,13 @@ from taxonomy.taxonomy import Taxonomy
 def get_readid2taxid(filename):
     readid2taxid = {}
     with open(filename, 'r') as f:
-        for line in f.readlines():
+        for line in f:
             line = line.strip().split('\t')
-            readid2taxid[line[0]] = int(line[1])
+            try:
+                readid2taxid[line[0]] = int(line[1])
+            except IndexError:
+                logging.debug(f"{line}")
+                exit(1)
     return readid2taxid
 
 
@@ -80,8 +84,6 @@ def main():
     logging.info("Computing statistics, this usually takes about 15 seconds...")
     evaluation_levels = ["genus", "species"]
     stats = {
-        "yeast_tn": 0,
-        "yeast_fp": 0,
         "unclassified_fp": 0,
         "unclassified_tn": 0}
     for level in evaluation_levels:
@@ -90,64 +92,55 @@ def main():
         stats[level + "_fp"] = 0
         stats[level + "_fn"] = 0
 
-    for readid, taxid in ground_truth_readid2taxid.items():
-        # If the ground truth tax id is 0, the read was unclassified according
+    for readid, true_taxid in ground_truth_readid2taxid.items():
+        # If the true taxid is 0, the read was unclassified according
         # to minimap2
-        if taxid == 0:
+        if true_taxid == 0:
             # Get the predicted tax id
-            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
-            if prediction == 0:
+            predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
+            # This read should go unclassified from the classifier's perspective
+            if predicted_taxid == 0:
                 stats["unclassified_tn"] += 1
             else:
                 stats["unclassified_fp"] += 1
 
-        # If the ground truth tax id value is either of the two yeast tax ids
-        elif taxid == 5207 or taxid == 4932:
-            # Get the predicted tax id
-            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
-            if prediction == 0:
-                stats["yeast_tn"] += 1
-            else:
-                stats["yeast_fp"] += 1
-
         else:
             # Get ground truth value and lineage
-            ground_truth = taxid
-            ground_truth_lineage = []
+            true_lineage = []
             for tax_level in evaluation_levels:
-                ground_truth_lineage.append(
+                true_lineage.append(
                     taxonomy.parent(
-                        str(ground_truth),
+                        str(true_taxid),
                         at_rank=tax_level))
 
             # Increment the ground truth total numbers immediately
-            for node in ground_truth_lineage:
+            for node in true_lineage:
                 if node is not None:
                     stats[node.rank + "_total"] += 1
 
             # Get the predicted tax id
-            prediction = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
+            predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
 
             # If the predicted tax id is 0, it has no lineage and will throw an error
             # Therefore, increment false negative counts and continue
-            if prediction == 0:
-                for node in ground_truth_lineage:
+            if predicted_taxid == 0:
+                for node in true_lineage:
                     if node is not None:
                         stats[node.rank + "_fn"] += 1
                 continue
 
             # Get the lineage for the predicted tax id
-            prediction_lineage = []
+            predicted_lineage = []
             for tax_level in evaluation_levels:
-                prediction_lineage.append(
+                predicted_lineage.append(
                     taxonomy.parent(
-                        str(prediction),
+                        str(predicted_taxid),
                         at_rank=tax_level))
 
             # Ignores classifier assignments that are more specific than the
             # ground truth
             for true_node, predicted_node in zip(
-                    ground_truth_lineage, prediction_lineage):
+                    true_lineage, predicted_lineage):
                 if true_node is None:
                     continue
                 else:
@@ -183,30 +176,31 @@ def main():
     else:
         print("<No classifier name provided>")
 
-    genus_tp, genus_fn, genus_fp, genus_tn = stats["genus_tp"], stats["genus_fn"], str(
-        stats['genus_fp']), ""
-    species_tp, species_fn, species_fp, species_tn = stats["species_tp"], stats["species_fn"], str(
-        stats['species_fp']), ""
+    genus_tp, genus_fn, genus_fp, genus_tn = stats["genus_tp"], stats["genus_fn"], stats['genus_fp'], 0
+    species_tp, species_fn, species_fp, species_tn = stats["species_tp"], stats["species_fn"], stats['species_fp'], 0
 
-    if args.ignore_unclassified:
-        genus_fp += ("+" + str(stats["yeast_fp"]))
-        genus_tn += str(stats["yeast_tn"])
-        species_fp += ("+" + str(stats["yeast_fp"]))
-        species_tn += str(stats["yeast_tn"])
-    else:
-        genus_fp += ("+" + str(stats["yeast_fp"]) + "+" + str(stats["unclassified_fp"]))
-        genus_tn += (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
-        species_fp += ("+" + str(stats["yeast_fp"]) + "+" + str(stats["unclassified_fp"]))
-        species_tn += (str(stats["yeast_tn"]) + "+" + str(stats["unclassified_tn"]))
+    if not args.ignore_unclassified:
+        genus_fp += stats["unclassified_fp"]
+        genus_tn += stats["unclassified_tn"]
+        species_fp += stats["unclassified_fp"]
+        species_tn += stats["unclassified_tn"]
+
+    genus_recall = genus_tp/(genus_tp+genus_fn)
+    genus_precision = genus_tp/(genus_tp+genus_fp)
+    genus_accuracy = (genus_tp+genus_tn)/(genus_tp+genus_tn+genus_fn+genus_fp)
+
+    species_recall = species_tp/(species_tp+species_fn)
+    species_precision = species_tp/(species_tp+species_fp)
+    species_accuracy = (species_tp+species_tn)/(species_tp+species_tn+species_fn+species_fp)
 
     print(
-        f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_tp/(genus_tp+genus_fn))}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_tp/(species_tp+species_fn))}")
+        f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_recall)}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_recall)}")
     print(f"{genus_fp}\t{genus_tn}\t\t\t{species_fp}\t{species_tn}")
     print(
-        f"{str(genus_tp/(genus_tp+eval(genus_fp)))}"
-        f"\t\t{str((genus_tp+eval(genus_tn))/(genus_tp+eval(genus_tn)+genus_fn+eval(genus_fp)))}"
-        f"\t\t{str(species_tp/(species_tp+eval(species_fp)))}"
-        f"\t\t{str((species_tp+eval(species_tn))/(species_tp+eval(species_tn)+species_fn+eval(species_fp)))}\n")
+        f"{str(genus_precision)}"
+        f"\t\t{str(genus_accuracy)}"
+        f"\t\t{str(species_precision)}"
+        f"\t\t{str(species_accuracy)}\n")
 
     logging.info("Done reporting statistics!")
 
