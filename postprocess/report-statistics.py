@@ -10,13 +10,19 @@ def get_readid2taxid(filename):
     with open(filename, 'r') as f:
         for line in f:
             line = line.strip().split('\t')
-            try:
-                readid2taxid[line[0]] = int(line[1])
-            except IndexError:
-                logging.debug(f"{line}")
-                exit(1)
+            readid2taxid[line[0]] = int(line[1])
     return readid2taxid
 
+def get_taxids_in_reference(filename, taxonomy, evaluation_levels):
+    taxids = set()
+    with open(filename, 'r') as f:
+        for line in f:
+            line = line.strip().split('\t')
+            for level in evaluation_levels:
+                taxid = taxonomy.parent(line[1], at_rank=level)
+                if taxid is not None:
+                    taxids.add(taxid.id)
+    return taxids
 
 def main():
     # Parse arguments from command line
@@ -57,6 +63,9 @@ def main():
     parser.add_argument(
         "predicted_readid2taxid",
         help="Tab separated read id to tax id of the classifier")
+    parser.add_argument(
+        "reference_seqid2taxid",
+        help="Tab separated seqid to taxid of the reference")
     args = parser.parse_args()
 
     # Initialize event logger
@@ -65,6 +74,8 @@ def main():
         level=logging.DEBUG,
         format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
         datefmt='%m-%d-%Y %I:%M:%S%p')
+
+    evaluation_levels = ["genus", "species"]
 
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
@@ -80,78 +91,78 @@ def main():
     predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
     logging.info("Both readid2taxids read!")
 
+    logging.info("Reading taxids from the reference")
+    reference_taxids = get_taxids_in_reference(args.reference_seqid2taxid, taxonomy, evaluation_levels)
+    logging.info("Reference taxids obtained!")
+
     # Compute the desired statistics for each tax id
     logging.info("Computing statistics, this usually takes about 15 seconds...")
-    evaluation_levels = ["genus", "species"]
-    stats = {
-        "unclassified_fp": 0,
-        "unclassified_tn": 0}
+    stats = {}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
         stats[level + "_tp"] = 0
         stats[level + "_fp"] = 0
         stats[level + "_fn"] = 0
+        stats[level + "_unclassified_tn"] = 0
+        stats[level + "_unclassified_fp"] = 0
+        stats[level + "_not_in_ref_fp"] = 0
+        stats[level + "_not_in_ref_tn"] = 0
 
     for readid, true_taxid in ground_truth_readid2taxid.items():
-        # If the true taxid is 0, the read was unclassified according
-        # to minimap2
-        if true_taxid == 0:
-            # Get the predicted tax id
-            predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
-            # This read should go unclassified from the classifier's perspective
-            if predicted_taxid == 0:
-                stats["unclassified_tn"] += 1
-            else:
-                stats["unclassified_fp"] += 1
+        if true_taxid == 0 and args.ignore_unclassified:
+            continue
 
-        else:
-            # Get ground truth value and lineage
-            true_lineage = []
-            for tax_level in evaluation_levels:
-                true_lineage.append(
-                    taxonomy.parent(
-                        str(true_taxid),
-                        at_rank=tax_level))
+        # Get ground truth lineage nodes
+        true_lineage = []
+        for tax_level in evaluation_levels:
+            true_lineage.append(
+                taxonomy.parent(
+                    str(true_taxid),
+                    at_rank=tax_level))
 
-            # Increment the ground truth total numbers immediately
-            for node in true_lineage:
-                if node is not None:
-                    stats[node.rank + "_total"] += 1
+        # Get the predicted taxid
+        predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
 
-            # Get the predicted tax id
-            predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
+        # Get the lineage nodes for the predicted taxid
+        predicted_lineage = []
+        for tax_level in evaluation_levels:
+            predicted_lineage.append(
+                taxonomy.parent(
+                    str(predicted_taxid),
+                    at_rank=tax_level))
 
-            # If the predicted tax id is 0, it has no lineage and will throw an error
-            # Therefore, increment false negative counts and continue
-            if predicted_taxid == 0:
-                for node in true_lineage:
-                    if node is not None:
-                        stats[node.rank + "_fn"] += 1
-                continue
-
-            # Get the lineage for the predicted tax id
-            predicted_lineage = []
-            for tax_level in evaluation_levels:
-                predicted_lineage.append(
-                    taxonomy.parent(
-                        str(predicted_taxid),
-                        at_rank=tax_level))
-
-            # Ignores classifier assignments that are more specific than the
-            # ground truth
-            for true_node, predicted_node in zip(
-                    true_lineage, predicted_lineage):
-                if true_node is None:
-                    continue
+        # Increment the correct count based on the observed lineage
+        for true_node, predicted_node, level in zip(
+                true_lineage, predicted_lineage, evaluation_levels):
+            
+            if true_node is None and predicted_node is None:
+                stats[level + "_unclassified_tn"] += 1
+            elif true_node is None and predicted_node is not None:
+                stats[level + "_unclassified_fp"] += 1
+            elif true_node is not None and predicted_node is None:
+                if true_node.id in reference_taxids:
+                    # Classifier could have made the correct assignment but failed to do so
+                    stats[level + "_fn"] += 1
                 else:
-                    if predicted_node is None:
-                        stats[true_node.rank + "_fn"] += 1
+                    # Classifier could not have made the correct assignment
+                    # and correctly abstained from making one
+                    stats[level + "_not_in_ref_tn"] += 1
+            else:
+                # Both true node and predicted node are NOT 'None'
+                if true_node.id in reference_taxids:
+                    # Classifer could have made the correct assignment, check if it did
+                    if true_node.id == predicted_node.id:
+                        stats[level + "_tp"] += 1
                     else:
-                        assert true_node.rank == predicted_node.rank
-                        if true_node.id == predicted_node.id:
-                            stats[true_node.rank + "_tp"] += 1
-                        else:
-                            stats[true_node.rank + "_fp"] += 1
+                        stats[level + "_fp"] += 1
+                else:
+                    # Classifier could not have made the correct assignment, but it made an assignment anyways
+                    assert true_node.id != predicted_node.id
+                    stats[level + "_not_in_ref_fp"] += 1
+            
+            # Increment the total count
+            stats[level + "_total"] += 1
+
 
     # Print formulas if needed
     if args.give_formulas:
@@ -176,14 +187,12 @@ def main():
     else:
         print("<No classifier name provided>")
 
-    genus_tp, genus_fn, genus_fp, genus_tn = stats["genus_tp"], stats["genus_fn"], stats['genus_fp'], 0
-    species_tp, species_fn, species_fp, species_tn = stats["species_tp"], stats["species_fn"], stats['species_fp'], 0
-
-    if not args.ignore_unclassified:
-        genus_fp += stats["unclassified_fp"]
-        genus_tn += stats["unclassified_tn"]
-        species_fp += stats["unclassified_fp"]
-        species_tn += stats["unclassified_tn"]
+    genus_tp, genus_fn = stats["genus_tp"], stats["genus_fn"]
+    genus_fp = stats["genus_fp"] + stats["genus_unclassified_fp"] + stats["genus_not_in_ref_fp"]
+    genus_tn = stats["genus_unclassified_tn"] + stats["genus_not_in_ref_tn"]
+    species_tp, species_fn = stats["species_tp"], stats["species_fn"]
+    species_fp = stats["species_fp"] + stats["species_unclassified_fp"] + stats["species_not_in_ref_fp"]
+    species_tn = stats["species_unclassified_tn"] + stats["species_not_in_ref_tn"]
 
     genus_recall = genus_tp/(genus_tp+genus_fn)
     genus_precision = genus_tp/(genus_tp+genus_fp)
