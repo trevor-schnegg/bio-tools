@@ -18,13 +18,13 @@ def get_postfix(num: int) -> str:
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Takes the Zymo reference and adds accessions to the records")
+        description="Takes a reference and adds accessions to the records")
     parser.add_argument(
         "taxonomy",
         help="NCBI taxonomy directory")
     parser.add_argument(
-        "zymo_reference",
-        help="The zymo reference file")
+        "fasta_file",
+        help="The reference fasta file")
     args = parser.parse_args()
 
     # Initialize event logger
@@ -40,13 +40,13 @@ def main():
     logging.info("Taxonomy read!")
 
     # Create output file name
-    split_input_file = args.zymo_reference.split("/")[-1].split("_")
+    split_input_file = args.fasta_file.split("/")[-1].split("_")
     genus = split_input_file[0]
     species = split_input_file[1]
     id_prefix = genus[0] + species[0]
     id_number = 1
     output_file_prefix = reduce(
-        lambda acc, x: acc + "/" + x, args.zymo_reference.split("/")[
+        lambda acc, x: acc + "/" + x, args.fasta_file.split("/")[
             :-1]) + "/" + genus + "_" + species + "_formatted"
     logging.info(f"Will write to files with prefix '{output_file_prefix}'")
 
@@ -63,8 +63,8 @@ def main():
 
     # Read the reference fasta file and create a new fasta file and
     # accession2taxid for the new file
-    logging.info(f"Looping through reference file at {args.zymo_reference}")
-    fasta_file = SeqIO.parse(args.zymo_reference, 'fasta')
+    logging.info(f"Looping through reference file at {args.fasta_file}")
+    fasta_file = SeqIO.parse(args.fasta_file, 'fasta')
     with open(output_file_prefix + ".fasta", "w") as out_file_handle:
         with open(output_file_prefix + ".accession2taxid", "w") as accession2taxid:
             for record in fasta_file:

@@ -2,17 +2,10 @@ import argparse
 import logging
 import sys
 
-import pandas as pd
 import pysam
 from taxonomy.taxonomy import Taxonomy
+from lib.lib import load_accession2taxid
 
-def load_accession2taxid(file):
-    accession2taxid = {}
-    with open(file, 'r') as f:
-        for line in f:
-            line = line.strip().split('\t')
-            accession2taxid[line[0]] = int(line[1])
-    return accession2taxid
 
 def main():
     # Parse arguments from command line
@@ -65,7 +58,7 @@ def main():
             # Haven't gathered all information for this read yet
             if last_readid == "":
                 last_readid = readid
-            
+
             if mapq >= last_readid_highest_mapq:
                 mappings_buffer.clear()
                 last_readid_highest_mapq = mapq
@@ -85,13 +78,13 @@ def main():
                 for accession in mappings_buffer[1:]:
                     lca = taxonomy.lca(lca, accession2taxid[accession]).id
                 print(f"{last_readid}\t{lca}")
-            
+
             # Start the new readid
             last_readid = readid
             mappings_buffer.clear()
             mappings_buffer.append(accession)
             last_readid_highest_mapq = mapq
-    
+
     # Print remaining information in the buffer
     if len(mappings_buffer) == 1:
         print_accession = mappings_buffer[0]

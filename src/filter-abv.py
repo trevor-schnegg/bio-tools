@@ -4,6 +4,7 @@ import os
 import random
 import subprocess
 import sys
+
 from multiprocessing.pool import Pool
 
 
@@ -24,10 +25,10 @@ def main():
         default=14,
         help="Number of threads to use")
     parser.add_argument(
-        "abv",
-        help="Directory containing fasta files for abv")
+        "starting_reference",
+        help="Directory containing reference fasta files")
     parser.add_argument(
-        "output_dir",
+        "output_directory",
         help="Location of the directory to output symbolic links to"
     )
     args = parser.parse_args()
@@ -39,27 +40,37 @@ def main():
         format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
         datefmt='%m-%d-%Y %I:%M:%S%p')
 
-    logging.info(f"Looping through reference files in {args.abv}")
+    logging.info(f"Looping through reference files in {args.starting_reference}")
     with Pool(args.threads) as pool:
-        reference_files = map(
+        ref_files = map(
             lambda x: os.path.realpath(
                 os.path.join(
-                    args.abv, x)), filter(
+                    args.starting_reference, x)), filter(
                 lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
-                    args.abv)))
-        all_files = pool.map(get_info, reference_files)
-        total_current_size = sum(map(lambda x: x[1], all_files))
+                    args.starting_reference)))
+
+        # Get the size of each file
+        ref_files_info = pool.map(get_info, ref_files)
+
+        # Get the total size of all files
+        total_current_size = sum(map(lambda x: x[1], ref_files_info))
+
         print(f"current total size: {total_current_size}")
-        # 31513498 is the size of the zymo genomes
         half_total_size = round(total_current_size / 2)
         print(f"goal total size: {half_total_size}")
+
+        # Pop a random file from the group until the size is below the goal
         while total_current_size > half_total_size:
-            random_index = random.randint(0, len(all_files) - 1)
-            total_current_size -= all_files[random_index][1]
-            all_files.pop(random_index)
-        print(f"resulting size: {sum(map(lambda x: x[1], all_files))}")
-        for (file, _) in all_files:
-            subprocess.run(["ln", "-s", file, args.output_dir])
+            random_index = random.randint(0, len(ref_files_info) - 1)
+            total_current_size -= ref_files_info[random_index][1]
+            ref_files_info.pop(random_index)
+
+        total_resulting_size = sum(map(lambda x: x[1], ref_files_info))
+        print(f"resulting size: {total_resulting_size}")
+
+        # Symbolic link each output file (instead of copying)
+        for (file, _) in ref_files_info:
+            subprocess.run(["ln", "-s", file, args.output_directory])
 
 
 if __name__ == '__main__':

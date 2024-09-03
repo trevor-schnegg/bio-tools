@@ -14,7 +14,6 @@ def get_seqid2taxid(filename, columns=None):
                 readid2taxid[line[columns[0]]] = int(line[columns[1]])
     return readid2taxid
 
-
 def get_krakenuniq_taxid2taxid(filename):
     krakenuniq_seq2taxid = get_seqid2taxid(filename)
     seqid2taxid = get_seqid2taxid(filename + ".orig")
@@ -24,7 +23,6 @@ def get_krakenuniq_taxid2taxid(filename):
         taxid2taxid[taxid] = real_taxid
     return taxid2taxid
 
-
 def get_kasa_taxid2taxid(ref_content, seqid2taxid):
     kasa_readid2taxid = get_seqid2taxid(ref_content, (3, 2))
     seqid2taxid = get_seqid2taxid(seqid2taxid)
@@ -33,7 +31,6 @@ def get_kasa_taxid2taxid(ref_content, seqid2taxid):
         real_taxid = seqid2taxid[seqid]
         taxid2taxid[taxid] = real_taxid
     return taxid2taxid
-
 
 def main():
     # Parse arguments from command line
