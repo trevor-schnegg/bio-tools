@@ -23,6 +23,8 @@ def main():
             for _ in range(11):
                 curr_line = next(file_iter, None)
 
+        print("classifier\tgenus_prec\tgenus_recall\tgenus_acc\tspecies_prec\tspecies_recall\tspecies_acc")
+
         # Each iteration of the while loop processes a full classifier
         while curr_line is not None:
             classifier_name = next(file_iter, None)
