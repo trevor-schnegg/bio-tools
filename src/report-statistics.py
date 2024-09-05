@@ -96,7 +96,7 @@ def main():
     logging.info("Reference taxids obtained!")
 
     # Compute the desired statistics for each tax id
-    logging.info("Computing statistics, this usually takes about 15 seconds...")
+    logging.info(f"Computing statistics for {args.classifier_name}, this takes about 15 seconds max...")
     stats = {}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
@@ -194,13 +194,13 @@ def main():
     species_fp = stats["species_fp"] + stats["species_unclassified_fp"] + stats["species_not_in_ref_fp"]
     species_tn = stats["species_unclassified_tn"] + stats["species_not_in_ref_tn"]
 
-    genus_recall = genus_tp/(genus_tp+genus_fn)
-    genus_precision = genus_tp/(genus_tp+genus_fp)
-    genus_accuracy = (genus_tp+genus_tn)/(genus_tp+genus_tn+genus_fn+genus_fp)
+    genus_recall = (genus_tp/(genus_tp+genus_fn)) * 100
+    genus_precision = (genus_tp/(genus_tp+genus_fp)) * 100
+    genus_accuracy = ((genus_tp+genus_tn)/(genus_tp+genus_tn+genus_fn+genus_fp)) * 100
 
-    species_recall = species_tp/(species_tp+species_fn)
-    species_precision = species_tp/(species_tp+species_fp)
-    species_accuracy = (species_tp+species_tn)/(species_tp+species_tn+species_fn+species_fp)
+    species_recall = (species_tp/(species_tp+species_fn)) * 100
+    species_precision = (species_tp/(species_tp+species_fp)) * 100
+    species_accuracy = ((species_tp+species_tn)/(species_tp+species_tn+species_fn+species_fp)) * 100
 
     print(
         f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_recall)}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_recall)}")
