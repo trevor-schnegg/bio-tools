@@ -48,7 +48,7 @@ def main():
         next(in_file)
         for line in in_file:
             line = list(line.strip().split("\t"))
-            new_row_data[line[0]] = line[6]
+            new_row_data[line[0]] = line[-1]
 
     # If this is the first line, write the order to the output file
     if args.first_line:

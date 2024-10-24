@@ -163,29 +163,19 @@ def main():
             # Increment the total count
             stats[level + "_total"] += 1
 
-
     # Print formulas if needed
     if args.give_formulas:
         print("TP = True Positives, FP = False Positives, FN = False Negatives")
         print("precision = TP / (TP + FP)")
         print("recall = TP / (TP + FN)")
-        print("accuracy = TP / (TP + FP + FN + TN)\n")
+        print("accuracy = (TP + TN) / (TP + FP + FN + TN)\n")
 
-    statistics = ["precision", "recall", "accuracy"]
-    # Print header line if required
-    if args.include_header:
-        print("Output is formatted in the following manner:\n")
-        print("<Classifier Name>")
-        print("genus_TP\tgenus_FN\tgenus_recall\t\tspecies_TP\tspecies_FN\tspecies_recall")
-        print("genus_FP\tgenus_TN\t\t\tspecies_FP\tspecies_TN")
-        print(
-            "genus_precision\t\tgenus_accuracy\t\tspecies_precision\t\tspecies_accuracy\n")
-
+    print_string = ""
     # Print statistics
     if args.classifier_name is not None:
-        print(args.classifier_name)
+        print_string += f"{args.classifier_name}\t"
     else:
-        print("<No classifier name provided>")
+        print_string += "<No name provided>\t"
 
     genus_tp, genus_fn = stats["genus_tp"], stats["genus_fn"]
     genus_fp = stats["genus_fp"] + stats["genus_unclassified_fp"] + stats["genus_not_in_ref_fp"]
@@ -202,14 +192,13 @@ def main():
     species_precision = (species_tp/(species_tp+species_fp)) * 100
     species_accuracy = ((species_tp+species_tn)/(species_tp+species_tn+species_fn+species_fp)) * 100
 
-    print(
-        f"{str(genus_tp)}\t{str(genus_fn)}\t{str(genus_recall)}\t\t{str(species_tp)}\t{str(species_fn)}\t{str(species_recall)}")
-    print(f"{genus_fp}\t{genus_tn}\t\t\t{species_fp}\t{species_tn}")
-    print(
-        f"{str(genus_precision)}"
-        f"\t\t{str(genus_accuracy)}"
-        f"\t\t{str(species_precision)}"
-        f"\t\t{str(species_accuracy)}\n")
+    if args.include_header:
+        print("genus_recall\tgenus_precision\tgenus_accuracy\tspecies_recall\tspecies_precision\tspecies_accuracy\t"
+              "genus_TP\tgenus_FP\tgenus_FN\tgenus_TN\tspecies_TP\tspecies_FP\tspecies_FN\tspecies_TN")
+
+    print_string += f"{genus_recall}\t{genus_precision}\t{genus_accuracy}\t{species_recall}\t{species_precision}\t{species_accuracy}\t"
+    print_string += f"{genus_tp}\t{genus_fp}\t{genus_fn}\t{genus_tn}\t{species_tp}\t{species_fp}\t{species_fn}\t{species_tn}"
+    print(print_string)
 
     logging.info("Done reporting statistics!")
 
