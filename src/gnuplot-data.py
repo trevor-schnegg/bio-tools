@@ -7,15 +7,39 @@ def get_order_from_output(out_file):
         f = iter(f)
         return list(next(f).strip().split("\t"))
 
-def get_order_from_input(in_file):
+def get_order_from_input(in_file, skip_formula_headers):
     order = []
     with open(in_file, "r") as f:
         f = iter(f)
-        # Skip the header line of the tabular data
-        next(f)
+
+        # Skip header lines
+        if skip_formula_headers:
+            for _ in range(6):
+                next(f)
+        else:
+            next(f)
+
         for line in f:
             order.append(line.strip().split("\t")[0])
     return order
+
+def get_new_row_data(in_file, skip_formula_headers):
+    new_row_data = {}
+    with open(in_file, 'r') as f:
+        f = iter(f)
+
+        # Skip header lines
+        if skip_formula_headers:
+            for _ in range(6):
+                next(f)
+        else:
+            next(f)
+
+        # Add new stats
+        for line in f:
+            line = line.strip().split('\t')
+            new_row_data[line[0]] = line[6]
+    return new_row_data
 
 
 def main():
@@ -28,6 +52,12 @@ def main():
         dest="first_line",
         action="store_true",
         help="If this is the first extraction for the gnuplot data")
+    parser.add_argument(
+        "-s",
+        "--skip-formula-headers",
+        dest="skip_formula_headers",
+        action="store_true",
+        help="If the raw statistics has the formula headers")
     parser.add_argument("input_file", help="Tabular report file to extract from")
     parser.add_argument("output_file", help="The output file")
 
@@ -41,18 +71,11 @@ def main():
         datefmt='%m-%d-%Y %I:%M:%S%p')
 
     # Get the new row data from the input file
-    new_row_data = {}
-    with open(args.input_file, 'r') as in_file:
-        in_file = iter(in_file)
-        # Skip the header line of the tabular data
-        next(in_file)
-        for line in in_file:
-            line = list(line.strip().split("\t"))
-            new_row_data[line[0]] = line[-1]
+    new_row_data = get_new_row_data(args.input_file, args.skip_formula_headers)
 
     # If this is the first line, write the order to the output file
     if args.first_line:
-        order = get_order_from_input(args.input_file)
+        order = get_order_from_input(args.input_file, args.skip_formula_headers)
         order_str = f"{order[0]}"
         for classifier in order[1:]:
             order_str += f"\t{classifier}"

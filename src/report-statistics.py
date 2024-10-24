@@ -193,7 +193,7 @@ def main():
     species_accuracy = ((species_tp+species_tn)/(species_tp+species_tn+species_fn+species_fp)) * 100
 
     if args.include_header:
-        print("genus_recall\tgenus_precision\tgenus_accuracy\tspecies_recall\tspecies_precision\tspecies_accuracy\t"
+        print("classifier\tgenus_recall\tgenus_precision\tgenus_accuracy\tspecies_recall\tspecies_precision\tspecies_accuracy\t"
               "genus_TP\tgenus_FP\tgenus_FN\tgenus_TN\tspecies_TP\tspecies_FP\tspecies_FN\tspecies_TN")
 
     print_string += f"{genus_recall}\t{genus_precision}\t{genus_accuracy}\t{species_recall}\t{species_precision}\t{species_accuracy}\t"
