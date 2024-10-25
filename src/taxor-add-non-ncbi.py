@@ -7,10 +7,6 @@ from Bio import SeqIO
 from taxonomy.taxonomy import Taxonomy
 from lib.lib import load_accession2taxid
 
-def get_info(fasta_file):
-    file_size = os.stat(fasta_file).st_size
-    return fasta_file, file_size
-
 
 def main():
 
@@ -55,7 +51,7 @@ def main():
     logging.info("Printing taxor reference strings")
     for file in ref_files:
         file_name_with_extension = os.path.basename(file)
-        taxid = accession2taxid[next(SeqIO.parse(file, 'fasta')).id]
+        taxid = accession2taxid[next(SeqIO.parse(file, 'fasta')).id.split(".")[0]]
         assembly_version = ""
         if "_" in file_name_with_extension:
             file_split = file_name_with_extension.split(".")
