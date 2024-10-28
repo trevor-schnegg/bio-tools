@@ -49,7 +49,8 @@ def main():
                 args.reference_directory)))
 
     logging.info("Printing taxor reference strings")
-    for file in ref_files:
+    for i, file in enumerate(ref_files):
+        i_str = str(i)
         file_name_with_extension = os.path.basename(file)
         taxid = accession2taxid[next(SeqIO.parse(file, 'fasta')).id.split(".")[0]]
         assembly_version = ""
@@ -58,7 +59,7 @@ def main():
             assembly_version = file_split[0] + file_split[1].split("_")[0]
         else:
             assembly_version = file_name_with_extension.split(".")[0]
-        print(f"{assembly_version}\t{taxid}\t/{file_name_with_extension}\t<None>\t<None>\t<None>")
+        print(f"{assembly_version}\t{taxid}\t/{file_name_with_extension}\t<None {i_str}>\t<None {i_str}>\t<None {i_str}>")
 
 
 if __name__ == '__main__':
