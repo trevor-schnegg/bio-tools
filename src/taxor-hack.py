@@ -90,8 +90,7 @@ def main():
 
         assembly_version = ""
         if "_" in file_name_with_extension:
-            file_split = file_name_with_extension.split(".")
-            assembly_version = file_split[0] + file_split[1].split("_")[0]
+            assembly_version = file_name_with_extension.split("_")[0]
         else:
             assembly_version = file_name_with_extension.split(".")[0]
 
