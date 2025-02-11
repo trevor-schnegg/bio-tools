@@ -23,7 +23,7 @@ def get_order_from_input(in_file, skip_formula_headers):
             order.append(line.strip().split("\t")[0])
     return order
 
-def get_new_row_data(in_file, skip_formula_headers):
+def get_new_row_data(in_file, skip_formula_headers, is_sizes):
     new_row_data = {}
     with open(in_file, 'r') as f:
         f = iter(f)
@@ -38,7 +38,10 @@ def get_new_row_data(in_file, skip_formula_headers):
         # Add new stats
         for line in f:
             line = line.strip().split('\t')
-            new_row_data[line[0]] = line[6]
+            if is_sizes:
+                new_row_data[line[0]] = line[1]
+            else:
+                new_row_data[line[0]] = line[6]
     return new_row_data
 
 
@@ -58,6 +61,11 @@ def main():
         dest="skip_formula_headers",
         action="store_true",
         help="If the raw statistics has the formula headers")
+    parser.add_argument(
+        "--sizes",
+        dest="is_sizes",
+        action="store_true",
+        help="If the data is maximum rss sizes")
     parser.add_argument("input_file", help="Tabular report file to extract from")
     parser.add_argument("output_file", help="The output file")
 
@@ -71,7 +79,7 @@ def main():
         datefmt='%m-%d-%Y %I:%M:%S%p')
 
     # Get the new row data from the input file
-    new_row_data = get_new_row_data(args.input_file, args.skip_formula_headers)
+    new_row_data = get_new_row_data(args.input_file, args.skip_formula_headers, args.is_sizes)
 
     # If this is the first line, write the order to the output file
     if args.first_line:
