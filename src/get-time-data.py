@@ -8,6 +8,7 @@ def read_time_output(file):
     file_info = {}
     with open(file, "r") as f:
         for line in f:
+            line = line.split(";")[1] if ";" in line else line
             split_line = line.strip().split(" ")
             value = split_line[-1]
             key = f"{split_line[0]}"
