@@ -108,33 +108,43 @@ def main():
         stats[level + "_not_in_ref_fp"] = 0
         stats[level + "_not_in_ref_tn"] = 0
 
+    cache = {}
+
     for readid, true_taxid in ground_truth_readid2taxid.items():
         if true_taxid == 0 and args.ignore_unclassified:
             continue
 
         # Get ground truth lineage nodes
         true_lineage = []
-        for tax_level in evaluation_levels:
-            true_lineage.append(
-                taxonomy.parent(
-                    str(true_taxid),
-                    at_rank=tax_level))
+        if true_taxid in cache:
+            true_lineage = cache[true_taxid]
+        else:
+            for tax_level in evaluation_levels:
+                true_lineage.append(
+                    taxonomy.parent(
+                        str(true_taxid),
+                        at_rank=tax_level))
+            cache[true_taxid] = true_lineage
 
         # Get the predicted taxid
         predicted_taxid = predicted_readid2taxid[readid] if readid in predicted_readid2taxid else 0
 
         # Get the lineage nodes for the predicted taxid
         predicted_lineage = []
-        for tax_level in evaluation_levels:
-            predicted_lineage.append(
-                taxonomy.parent(
-                    str(predicted_taxid),
-                    at_rank=tax_level))
+        if predicted_taxid in cache:
+            predicted_lineage = cache[predicted_taxid]
+        else:
+            for tax_level in evaluation_levels:
+                predicted_lineage.append(
+                    taxonomy.parent(
+                        str(predicted_taxid),
+                        at_rank=tax_level))
+            cache[predicted_taxid] = predicted_lineage
 
         # Increment the correct count based on the observed lineage
         for true_node, predicted_node, level in zip(
                 true_lineage, predicted_lineage, evaluation_levels):
-            
+
             if true_node is None and predicted_node is None:
                 stats[level + "_unclassified_tn"] += 1
             elif true_node is None and predicted_node is not None:
@@ -159,9 +169,21 @@ def main():
                     # Classifier could not have made the correct assignment, but it made an assignment anyways
                     assert true_node.id != predicted_node.id
                     stats[level + "_not_in_ref_fp"] += 1
-            
+
             # Increment the total count
             stats[level + "_total"] += 1
+
+    if args.ignore_unclassified:
+        taxonomy_issue_detected = False
+        if stats["genus_unclassified_fp"] > 0 or stats["genus_unclassified_tn"] > 0:
+            taxonomy_issue_detected = True
+        if stats["species_unclassified_fp"] > 0 or stats["species_unclassified_tn"] > 0:
+            taxonomy_issue_detected = True
+
+        if taxonomy_issue_detected:
+            # Log issue if there was one
+            logging.warning("Argument to ignore unclassified reads provided, but None values were detected in the ground truth")
+            logging.warning("There is likely an issue with the taxonomy or the ground truth read assignments")
 
     # Print formulas if needed
     if args.give_formulas:
