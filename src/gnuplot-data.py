@@ -2,10 +2,12 @@ import argparse
 import logging
 import sys
 
+
 def get_order_from_output(out_file):
     with open(out_file, "r") as f:
         f = iter(f)
         return list(next(f).strip().split("\t"))
+
 
 def get_order_from_input(in_file, skip_formula_headers):
     order = []
@@ -23,9 +25,10 @@ def get_order_from_input(in_file, skip_formula_headers):
             order.append(line.strip().split("\t")[0])
     return order
 
+
 def get_new_row_data(in_file, skip_formula_headers, is_sizes):
     new_row_data = {}
-    with open(in_file, 'r') as f:
+    with open(in_file, "r") as f:
         f = iter(f)
 
         # Skip header lines
@@ -37,7 +40,7 @@ def get_new_row_data(in_file, skip_formula_headers, is_sizes):
 
         # Add new stats
         for line in f:
-            line = line.strip().split('\t')
+            line = line.strip().split("\t")
             if is_sizes:
                 new_row_data[line[0]] = line[1]
             else:
@@ -48,24 +51,28 @@ def get_new_row_data(in_file, skip_formula_headers, is_sizes):
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Outputs a row of data to use in gnuplot")
+        description="Outputs a row of data to use in gnuplot"
+    )
     parser.add_argument(
         "-f",
         "--first",
         dest="first_line",
         action="store_true",
-        help="If this is the first extraction for the gnuplot data")
+        help="If this is the first extraction for the gnuplot data",
+    )
     parser.add_argument(
         "-s",
         "--skip-formula-headers",
         dest="skip_formula_headers",
         action="store_true",
-        help="If the raw statistics has the formula headers")
+        help="If the raw statistics has the formula headers",
+    )
     parser.add_argument(
         "--sizes",
         dest="is_sizes",
         action="store_true",
-        help="If the data is maximum rss sizes")
+        help="If the data is maximum rss sizes",
+    )
     parser.add_argument("input_file", help="Tabular report file to extract from")
     parser.add_argument("output_file", help="The output file")
 
@@ -75,11 +82,14 @@ def main():
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     # Get the new row data from the input file
-    new_row_data = get_new_row_data(args.input_file, args.skip_formula_headers, args.is_sizes)
+    new_row_data = get_new_row_data(
+        args.input_file, args.skip_formula_headers, args.is_sizes
+    )
 
     # If this is the first line, write the order to the output file
     if args.first_line:
@@ -100,5 +110,5 @@ def main():
     logging.info("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

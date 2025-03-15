@@ -18,21 +18,19 @@ def get_postfix(num: int) -> str:
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Takes a reference and adds accessions to the records")
-    parser.add_argument(
-        "taxonomy",
-        help="NCBI taxonomy directory")
-    parser.add_argument(
-        "fasta_file",
-        help="The reference fasta file")
+        description="Takes a reference and adds accessions to the records"
+    )
+    parser.add_argument("taxonomy", help="NCBI taxonomy directory")
+    parser.add_argument("fasta_file", help="The reference fasta file")
     args = parser.parse_args()
 
     # Initialize event logger
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
@@ -45,16 +43,22 @@ def main():
     species = split_input_file[1]
     id_prefix = genus[0] + species[0]
     id_number = 1
-    output_file_prefix = reduce(
-        lambda acc, x: acc + "/" + x, args.fasta_file.split("/")[
-            :-1]) + "/" + genus + "_" + species + "_formatted"
+    output_file_prefix = (
+        reduce(lambda acc, x: acc + "/" + x, args.fasta_file.split("/")[:-1])
+        + "/"
+        + genus
+        + "_"
+        + species
+        + "_formatted"
+    )
     logging.info(f"Will write to files with prefix '{output_file_prefix}'")
 
     # Get tax id of all records
     potential_nodes = taxonomy.find_all_by_name(genus + " " + species)
     if len(potential_nodes) != 1:
         logging.error(
-            f"{genus} {species} didn't return exactly 1 node, don't know what to do")
+            f"{genus} {species} didn't return exactly 1 node, don't know what to do"
+        )
         logging.error(f"The following nodes were found: {potential_nodes}")
         sys.exit()
     else:
@@ -64,7 +68,7 @@ def main():
     # Read the reference fasta file and create a new fasta file and
     # accession2taxid for the new file
     logging.info(f"Looping through reference file at {args.fasta_file}")
-    fasta_file = SeqIO.parse(args.fasta_file, 'fasta')
+    fasta_file = SeqIO.parse(args.fasta_file, "fasta")
     with open(output_file_prefix + ".fasta", "w") as out_file_handle:
         with open(output_file_prefix + ".accession2taxid", "w") as accession2taxid:
             for record in fasta_file:
@@ -73,9 +77,9 @@ def main():
                 record.id = id_prefix + "_" + id_postfix
                 record.description = record.id + " " + record.description
                 accession2taxid.write(f"{record.id}\t{tax_id}\n")
-                SeqIO.write(record, out_file_handle, 'fasta')
+                SeqIO.write(record, out_file_handle, "fasta")
             logging.info("Done reading through reference!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

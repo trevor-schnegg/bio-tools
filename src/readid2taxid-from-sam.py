@@ -4,36 +4,41 @@ import sys
 
 import pysam
 from taxonomy.taxonomy import Taxonomy
+
 from lib.lib import load_accession2taxid
 
 
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Outputs a tsv read id to tax id mapping from a sam file")
+        description="Outputs a tsv read id to tax id mapping from a sam file"
+    )
     parser.add_argument(
         "-e",
         "--exclude-none",
         dest="exclude_none",
         action="store_true",
-        help="Do not print out reads with no mapping location")
+        help="Do not print out reads with no mapping location",
+    )
     parser.add_argument(
-        "accession2taxid",
-        help="Tab separated accession to tax id")
-    parser.add_argument(
-        "sam_file",
-        help="SAM alignment file")
-    parser.add_argument(
-        "taxonomy",
-        help="The NCBI taxonomy location")
+        "-s",
+        "--species-level",
+        dest="species-level",
+        action="store_true",
+        help="If the mapping doesn't occur at the species level, consider it unmapped",
+    )
+    parser.add_argument("accession2taxid", help="Tab separated accession to tax id")
+    parser.add_argument("sam_file", help="SAM alignment file")
+    parser.add_argument("taxonomy", help="The NCBI taxonomy location")
     args = parser.parse_args()
 
     # Initialize event logger
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     # Read taxonomy
     logging.info(f"Attempting to read taxonomy from directory {args.taxonomy}")
@@ -49,7 +54,7 @@ def main():
     last_readid_highest_mapq = -1
     mappings_buffer = []
     logging.info("Extracting readid2taxid from SAM file")
-    for alignment in pysam.AlignmentFile(args.sam_file, 'r'):
+    for alignment in pysam.AlignmentFile(args.sam_file, "r"):
         readid = alignment.query_name
         accession = alignment.reference_name
         mapq = alignment.mapping_quality
@@ -77,7 +82,14 @@ def main():
                 lca = accession2taxid[mappings_buffer[0]]
                 for accession in mappings_buffer[1:]:
                     lca = taxonomy.lca(lca, accession2taxid[accession]).id
-                print(f"{last_readid}\t{lca}")
+
+                if (
+                    args.species_level
+                    and taxonomy.parent(lca, at_rank="species") is None
+                ):
+                    print(f"{last_readid}\t0")
+                else:
+                    print(f"{last_readid}\t{lca}")
 
             # Start the new readid
             last_readid = readid
@@ -96,10 +108,14 @@ def main():
         lca = accession2taxid[mappings_buffer[0]]
         for accession in mappings_buffer[1:]:
             lca = taxonomy.lca(lca, accession2taxid[accession]).id
-        print(f"{last_readid}\t{lca}")
+
+            if args.species_level and taxonomy.parent(lca, at_rank="species") is None:
+                print(f"{last_readid}\t0")
+            else:
+                print(f"{last_readid}\t{lca}")
 
     logging.info("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -21,10 +21,29 @@ def read_time_output(file):
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Outputs the requested features of the 'time -v' command")
-    parser.add_argument("-f", "--first", dest="first", action="store_true", help="If this is the first classifier being added")
-    parser.add_argument("-r", "--rss-max", dest="max_rss", action="store_true", help="The maximum resident set size (memory usage)")
-    parser.add_argument("-w", "--wall-clock-time", dest="wall_clock_time", action="store_true", help="The elapsed wall clock time")
+        description="Outputs the requested features of the 'time -v' command"
+    )
+    parser.add_argument(
+        "-f",
+        "--first",
+        dest="first",
+        action="store_true",
+        help="If this is the first classifier being added",
+    )
+    parser.add_argument(
+        "-r",
+        "--rss-max",
+        dest="max_rss",
+        action="store_true",
+        help="The maximum resident set size (memory usage)",
+    )
+    parser.add_argument(
+        "-w",
+        "--wall-clock-time",
+        dest="wall_clock_time",
+        action="store_true",
+        help="The elapsed wall clock time",
+    )
     parser.add_argument("file", help="The time output file to parse")
     parser.add_argument("name", help="The name of the classifier being added")
 
@@ -34,8 +53,9 @@ def main():
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     logging.info(f"Reading 'time -v' from {args.file}")
 
@@ -66,20 +86,26 @@ def main():
             split_time = list(split_time[1].split("."))
             seconds = int(split_time[0])
             milliseconds = int(split_time[1]) * 10
-            print(f"{args.name}\t{timedelta(minutes=minutes, seconds=seconds, milliseconds=milliseconds).total_seconds()}")
+            print(
+                f"{args.name}\t{timedelta(minutes=minutes, seconds=seconds, milliseconds=milliseconds).total_seconds()}"
+            )
 
         elif len(split_time) == 3:
             hours = int(split_time[0])
             minutes = int(split_time[1])
             seconds = int(split_time[2])
-            print(f"{args.name}\t{timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()}")
+            print(
+                f"{args.name}\t{timedelta(hours=hours, minutes=minutes, seconds=seconds).total_seconds()}"
+            )
 
         else:
-            logging.error(f"file {args.file} has an unrecognized time format, exiting...")
+            logging.error(
+                f"file {args.file} has an unrecognized time format, exiting..."
+            )
             sys.exit(1)
 
     logging.info("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

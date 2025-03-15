@@ -20,9 +20,9 @@ def lca_of_taxids(taxids, taxonomy: Taxonomy) -> str:
 
 def get_readid2taxid_for_lca(filename):
     readid2taxid = {}
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         for line in f.readlines():
-            line = line.strip().split('\t')
+            line = line.strip().split("\t")
             read_id = line[0]
             if read_id in readid2taxid:
                 readid2taxid[read_id].append(int(line[1]))
@@ -36,21 +36,19 @@ def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
         description="Takes read id to tax id mapping. "
-                    "Ensures that each read id has only one tax id by using the lca if needed")
-    parser.add_argument(
-        "taxonomy",
-        help="NCBI taxonomy directory")
-    parser.add_argument(
-        "readid2taxid",
-        help="Tab separated read id to tax id")
+        "Ensures that each read id has only one tax id by using the lca if needed"
+    )
+    parser.add_argument("taxonomy", help="NCBI taxonomy directory")
+    parser.add_argument("readid2taxid", help="Tab separated read id to tax id")
     args = parser.parse_args()
 
     # Initialize event logger
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     # Read taxonomy
     logging.info(f"Reading taxonomy from directory {args.taxonomy}")
@@ -70,5 +68,5 @@ def main():
     logging.info("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

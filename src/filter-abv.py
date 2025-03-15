@@ -4,7 +4,6 @@ import os
 import random
 import subprocess
 import sys
-
 from multiprocessing.pool import Pool
 
 
@@ -17,19 +16,16 @@ def main():
 
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Outputs a fasta directory with references to genomes in abv of approximately 1/2 input size")
+        description="Outputs a fasta directory with references to genomes in abv of approximately 1/2 input size"
+    )
     parser.add_argument(
-        "-t",
-        "--threads",
-        type=int,
-        default=14,
-        help="Number of threads to use")
+        "-t", "--threads", type=int, default=14, help="Number of threads to use"
+    )
     parser.add_argument(
-        "starting_reference",
-        help="Directory containing reference fasta files")
+        "starting_reference", help="Directory containing reference fasta files"
+    )
     parser.add_argument(
-        "output_directory",
-        help="Location of the directory to output symbolic links to"
+        "output_directory", help="Location of the directory to output symbolic links to"
     )
     args = parser.parse_args()
 
@@ -37,17 +33,19 @@ def main():
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='[%(asctime)s %(threadName)s %(levelname)s] %(message)s',
-        datefmt='%m-%d-%Y %I:%M:%S%p')
+        format="[%(asctime)s %(threadName)s %(levelname)s] %(message)s",
+        datefmt="%m-%d-%Y %I:%M:%S%p",
+    )
 
     logging.info(f"Looping through reference files in {args.starting_reference}")
     with Pool(args.threads) as pool:
         ref_files = map(
-            lambda x: os.path.realpath(
-                os.path.join(
-                    args.starting_reference, x)), filter(
-                lambda x: x.endswith('.fna') or x.endswith('.fasta'), os.listdir(
-                    args.starting_reference)))
+            lambda x: os.path.realpath(os.path.join(args.starting_reference, x)),
+            filter(
+                lambda x: x.endswith(".fna") or x.endswith(".fasta"),
+                os.listdir(args.starting_reference),
+            ),
+        )
 
         # Get the size of each file
         ref_files_info = pool.map(get_info, ref_files)
@@ -69,9 +67,9 @@ def main():
         print(f"resulting size: {total_resulting_size}")
 
         # Symbolic link each output file (instead of copying)
-        for (file, _) in ref_files_info:
+        for file, _ in ref_files_info:
             subprocess.run(["ln", "-s", file, args.output_directory])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
