@@ -3,9 +3,8 @@ import logging
 import sys
 
 import pysam
-from taxonomy.taxonomy import Taxonomy
-
 from lib.lib import load_accession2taxid
+from taxonomy.taxonomy import Taxonomy
 
 
 def main():
@@ -57,6 +56,10 @@ def main():
     for alignment in pysam.AlignmentFile(args.sam_file, "r"):
         readid = alignment.query_name
         accession = alignment.reference_name
+
+        if accession is not None:
+            accession = accession.split(".")[0]
+
         mapq = alignment.mapping_quality
 
         if last_readid == readid or last_readid == "":

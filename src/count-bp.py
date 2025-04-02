@@ -10,7 +10,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Counts the number of base pairs in the input file"
     )
-    parser.add_argument("fastq_file", help="The fastq file")
+    parser.add_argument(
+        "-f",
+        "--fasta",
+        dest="fasta",
+        action="store_true",
+        help="Option if the file is fasta (default is fastq)",
+    )
+    parser.add_argument("file", help="The fastq (or fasta) file")
     args = parser.parse_args()
 
     # Initialize event logger
@@ -22,10 +29,14 @@ def main():
     )
 
     # Read the fasta file and count the base pairs
-    logging.info(f"Looping through file at {args.fastq_file}")
+    logging.info(f"Looping through file at {args.file}")
     total_seq_len = 0
-    for record in SeqIO.parse(args.fastq_file, "fastq"):
-        total_seq_len += len(record.seq)
+    if args.fasta:
+        for record in SeqIO.parse(args.file, "fasta"):
+            total_seq_len += len(record.seq)
+    else:
+        for record in SeqIO.parse(args.file, "fastq"):
+            total_seq_len += len(record.seq)
     logging.info(f"total bases: {str(total_seq_len)}")
     logging.info("Done reading through reference!")
 
