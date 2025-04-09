@@ -9,6 +9,12 @@ Clone the repo:
 git clone https://github.com/trevor-schnegg/bio-tools
 ```
 
+Enter the directory:
+
+```
+cd bio-tools
+```
+
 Then, you can run the bash script to make the virtual environment and install dependencies:
 
 ```
