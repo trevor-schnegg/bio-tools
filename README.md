@@ -15,10 +15,10 @@ Then, you can run the bash script to make the virtual environment and install de
 ./make_venv.sh
 ```
 
-For ease of access, there is also a script to activate the environment in your termial session:
+For ease of access, there is also a script to activate the environment in your termial session (note the additional "dot" before running the script):
 
 ```
-./activate_venv.sh
+. ./activate_venv.sh
 ```
 
 Finally, all the binaries are in `src/<BIN.PY>` and help documentation can be found as follows:
