@@ -29,8 +29,7 @@ def get_taxids_in_reference(filename, taxonomy, evaluation_levels):
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. "
-        "of a classifier"
+        description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. of a classifier. IN GENERAL, if this is the first classifier you are running, you should run with options '-giuc <name>' (where <name> is the name of the classifier.) If this is not the first classifier, you should run with options '-uc <name>'."
     )
     parser.add_argument(
         "-g",
@@ -59,6 +58,13 @@ def main():
         dest="classifier_name",
         default=None,
         help="The name of the classifier whose accuracy is being evaluated",
+    )
+    parser.add_argument(
+        "-y",
+        "--yeast-stats",
+        dest="yeast_stats",
+        action="store_true",
+        help="Include this option if you only want to consider the yeast stats",
     )
     parser.add_argument("taxonomy", help="NCBI taxonomy directory")
     parser.add_argument(
@@ -122,6 +128,9 @@ def main():
 
     for readid, true_taxid in ground_truth_readid2taxid.items():
         if true_taxid == 0 and args.ignore_unclassified:
+            continue
+
+        if args.yeast_stats and true_taxid != 4932 and true_taxid != 5207:
             continue
 
         # Get ground truth lineage nodes
@@ -261,6 +270,9 @@ def main():
         ) * 100
     except ZeroDivisionError:
         species_accuracy = "undef"
+
+    if args.yeast_stats and args.give_formulas:
+        print(f"total yeast reads: {stats['species_total']}\n")
 
     if args.include_header:
         print(
