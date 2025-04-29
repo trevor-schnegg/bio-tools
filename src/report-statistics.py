@@ -14,29 +14,99 @@ def get_readid2taxid(filename):
     return readid2taxid
 
 
-def get_taxids_in_reference(filename, taxonomy, evaluation_levels):
-    taxids = set()
+def get_lineages_in_reference(filename, taxonomy, verbose):
+    warned = False
+    lineages = {}
+    lineages[0] = (None, None)
+
     with open(filename, "r") as f:
         for line in f:
-            line = line.strip().split("\t")
-            for level in evaluation_levels:
-                taxid = taxonomy.parent(line[1], at_rank=level)
-                if taxid is not None:
-                    taxids.add(taxid.id)
-    return taxids
+            ref_taxid = line.strip().split("\t")[1]
+
+            # Find the species node
+            species_node = taxonomy.parent(ref_taxid, at_rank="species")
+            if species_node is None:
+                # If no species node is found, log it then exit
+                logging.error(
+                    f"no species node found for tax id: {ref_taxid} - fix this and run again"
+                )
+                exit(1)
+
+            # Find the genus node
+            genus_node = taxonomy.parent(ref_taxid, at_rank="genus")
+            if genus_node is None:
+                # If no genus node is found, log appropriate messages
+                if not warned and not verbose:
+                    logging.warning("a tax id that did not have a genus node was found")
+                    logging.info(
+                        "provide option '-v' to log all tax ids without genus nodes"
+                    )
+                    warned = True
+                elif verbose:
+                    logging.warning(f"tax id {ref_taxid} has no genus node")
+
+                # After logging, set the genus node to be the parent of the species node
+                genus_node = taxonomy.node(species_node.parent)
+
+            # Finally, add the lineages to the dictionary
+            species_taxid = int(species_node.id)
+            genus_taxid = int(genus_node.id)
+            ref_taxid_int = int(ref_taxid)
+            lineages[ref_taxid_int] = (genus_taxid, species_taxid)
+            if ref_taxid_int != species_taxid:
+                # The reference tax id isn't the same as the species tax id
+                # It is likely at a lower level, so add the species tax id too
+                lineages[species_taxid] = (genus_taxid, species_taxid)
+            lineages[genus_taxid] = (genus_taxid, None)
+
+    return lineages, warned
+
+
+def get_lineage(taxid, taxonomy, verbose, warned):
+    # Find the species node
+    species_node = taxonomy.parent(taxid, at_rank="species")
+    if species_node is None:
+        # If no species node is found, log it then exit
+        logging.error(
+            f"no species node found for tax id: {taxid} - fix this and run again"
+        )
+        exit(1)
+
+    # Find the genus node
+    genus_node = taxonomy.parent(taxid, at_rank="genus")
+    if genus_node is None:
+        # If no genus node is found, log appropriate messages
+        if not warned and not verbose:
+            logging.warning("a tax id that did not have a genus node was found")
+            logging.info("provide option '-v' to log all tax ids without genus nodes")
+            warned = True
+        elif verbose:
+            logging.warning(f"tax id {taxid} has no genus node")
+
+        # After logging, set the genus node to be the parent of the species node
+        genus_node = taxonomy.node(species_node.parent)
+
+    return (int(genus_node.id), int(species_node.id)), warned
 
 
 def main():
     # Parse arguments from command line
     parser = argparse.ArgumentParser(
-        description="Takes a ground truth read id to tax id mapping and computes precision, recall, accuracy, etc. of a classifier. IN GENERAL, if this is the first classifier you are running, you should run with options '-giuc <name>' (where <name> is the name of the classifier.) If this is not the first classifier, you should run with options '-uc <name>'."
+        description="Computes genus and species-level statistics for classifier's mapping. If this is the first classifier, run with options '-guic <CLASSIFIER_NAME> ...', otherwise run with '-uc <CLASSIFIER_NAME> ...'"
+    )
+    parser.add_argument(
+        "-c",
+        "--classifier-name",
+        dest="classifier_name",
+        default=None,
+        help="The name of the classifier being evaluated",
     )
     parser.add_argument(
         "-g",
         "--give-formulas",
         dest="give_formulas",
         action="store_true",
-        help="If specified, print the formulas used for precision, recall, and accuracy",
+        help="Prints the formulas used for precision, recall, and accuracy",
     )
     parser.add_argument(
         "-i",
@@ -46,37 +116,39 @@ def main():
         help="Prints the header line before the output",
     )
     parser.add_argument(
+        "-o",
+        "--outside-reference",
+        dest="outside_reference",
+        action="store_true",
+        help="Computes statistics only for reads outside the reference",
+    )
+    parser.add_argument(
         "-u",
         "--ignore-unclassified",
         dest="ignore_unclassified",
         action="store_true",
-        help="Include this option if you want to exclude reads unclassified by the ground truth",
+        help="Excludes unclassified ground truth reads",
     )
     parser.add_argument(
-        "-c",
-        "--classifier-name",
-        dest="classifier_name",
-        default=None,
-        help="The name of the classifier whose accuracy is being evaluated",
-    )
-    parser.add_argument(
-        "-y",
-        "--yeast-stats",
-        dest="yeast_stats",
+        "-v",
+        "--verbose",
+        dest="verbose",
         action="store_true",
-        help="Include this option if you only want to consider the yeast stats",
+        help="Logs additional information about program execution",
     )
-    parser.add_argument("taxonomy", help="NCBI taxonomy directory")
+    parser.add_argument(
+        "taxonomy", help="NCBI taxonomy directory (with names.dmp and nodes.dmp)"
+    )
     parser.add_argument(
         "ground_truth_readid2taxid",
-        help="Tab separated read id to tax id of bwa-mem or other ground truth",
+        help="Tab separated read id to tax id of minimap2 or other ground truth",
     )
     parser.add_argument(
         "predicted_readid2taxid",
         help="Tab separated read id to tax id of the classifier",
     )
     parser.add_argument(
-        "reference_seqid2taxid", help="Tab separated seqid to taxid of the reference"
+        "reference_seqid2taxid", help="Tab separated seq id to tax id of the reference"
     )
     args = parser.parse_args()
 
@@ -88,31 +160,28 @@ def main():
         datefmt="%m-%d-%Y %I:%M:%S%p",
     )
 
-    evaluation_levels = ["genus", "species"]
-
     # Read taxonomy
-    logging.info(f"Reading taxonomy from directory {args.taxonomy}")
+    logging.info(f"reading taxonomy from directory {args.taxonomy}...")
     taxonomy: Taxonomy = Taxonomy.from_ncbi(args.taxonomy)
 
-    logging.info(
-        f"Reading ground truth readid2taxid from {args.ground_truth_readid2taxid}"
-    )
     # Read both readid2taxids
-    ground_truth_readid2taxid = get_readid2taxid(args.ground_truth_readid2taxid)
-    logging.info(f"Reading predicted readid2taxid from {args.predicted_readid2taxid}")
-    predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
-    logging.info("Both readid2taxids read!")
-
-    logging.info("Reading taxids from the reference")
-    reference_taxids = get_taxids_in_reference(
-        args.reference_seqid2taxid, taxonomy, evaluation_levels
+    logging.info(
+        f"reading ground truth readid2taxid from {args.ground_truth_readid2taxid}..."
     )
-    logging.info("Reference taxids obtained!")
+    ground_truth_readid2taxid = get_readid2taxid(args.ground_truth_readid2taxid)
+    logging.info(
+        f"reading predicted readid2taxid from {args.predicted_readid2taxid}..."
+    )
+    predicted_readid2taxid = get_readid2taxid(args.predicted_readid2taxid)
+
+    logging.info("getting lineages from the reference...")
+    reference_lineages, warned = get_lineages_in_reference(
+        args.reference_seqid2taxid, taxonomy, args.verbose
+    )
 
     # Compute the desired statistics for each tax id
-    logging.info(
-        f"Computing statistics for {args.classifier_name}, this takes about 15 seconds max..."
-    )
+    logging.info(f"computing statistics for {args.classifier_name}...")
+    evaluation_levels = ("genus", "species")
     stats = {}
     for level in evaluation_levels:
         stats[level + "_total"] = 0
@@ -124,23 +193,34 @@ def main():
         stats[level + "_not_in_ref_fp"] = 0
         stats[level + "_not_in_ref_tn"] = 0
 
-    cache = {}
+    additional_lineages = {}
 
     for readid, true_taxid in ground_truth_readid2taxid.items():
         if true_taxid == 0 and args.ignore_unclassified:
             continue
 
-        if args.yeast_stats and true_taxid != 4932 and true_taxid != 5207:
+        if args.outside_reference and true_taxid in reference_lineages:
             continue
 
         # Get ground truth lineage nodes
-        true_lineage = []
-        if true_taxid in cache:
-            true_lineage = cache[true_taxid]
+        true_lineage = (None, None)
+        if true_taxid in reference_lineages:
+            true_lineage = reference_lineages[true_taxid]
+        elif true_taxid in additional_lineages:
+            true_lineage = additional_lineages[true_taxid]
         else:
-            for tax_level in evaluation_levels:
-                true_lineage.append(taxonomy.parent(str(true_taxid), at_rank=tax_level))
-            cache[true_taxid] = true_lineage
+            true_lineage, warned = get_lineage(
+                str(true_taxid), taxonomy, args.verbose, warned
+            )
+            additional_lineages[true_taxid] = true_lineage
+            if true_taxid != true_lineage[1]:
+                additional_lineages[(true_lineage[1])] = true_lineage
+            additional_lineages[true_lineage[0]] = (true_lineage[0], None)
+
+        # Test that the ground truth lineage doesn't have a None value
+        if true_lineage[0] is None or true_lineage[1] is None:
+            logging.error(f"{true_lineage}")
+            exit()
 
         # Get the predicted taxid
         predicted_taxid = (
@@ -148,27 +228,31 @@ def main():
         )
 
         # Get the lineage nodes for the predicted taxid
-        predicted_lineage = []
-        if predicted_taxid in cache:
-            predicted_lineage = cache[predicted_taxid]
+        predicted_lineage = (None, None)
+        if predicted_taxid in reference_lineages:
+            predicted_lineage = reference_lineages[predicted_taxid]
+        elif predicted_taxid in additional_lineages:
+            predicted_lineage = additional_lineages[predicted_taxid]
         else:
-            for tax_level in evaluation_levels:
-                predicted_lineage.append(
-                    taxonomy.parent(str(predicted_taxid), at_rank=tax_level)
-                )
-            cache[predicted_taxid] = predicted_lineage
+            predicted_lineage, warned = get_lineage(
+                str(predicted_taxid), taxonomy, args.verbose, warned
+            )
+            additional_lineages[predicted_taxid] = predicted_lineage
+            if predicted_taxid != predicted_lineage[1]:
+                additional_lineages[(predicted_lineage[1])] = predicted_lineage
+            additional_lineages[predicted_lineage[0]] = (predicted_lineage[0], None)
 
         # Increment the correct count based on the observed lineage
-        for true_node, predicted_node, level in zip(
+        for true_taxid, predicted_taxid, level in zip(
             true_lineage, predicted_lineage, evaluation_levels
         ):
 
-            if true_node is None and predicted_node is None:
+            if true_taxid is None and predicted_taxid is None:
                 stats[level + "_unclassified_tn"] += 1
-            elif true_node is None and predicted_node is not None:
+            elif true_taxid is None and predicted_taxid is not None:
                 stats[level + "_unclassified_fp"] += 1
-            elif true_node is not None and predicted_node is None:
-                if true_node.id in reference_taxids:
+            elif true_taxid is not None and predicted_taxid is None:
+                if true_taxid in reference_lineages:
                     # Classifier could have made the correct assignment but failed to do so
                     stats[level + "_fn"] += 1
                 else:
@@ -176,36 +260,26 @@ def main():
                     # and correctly abstained from making one
                     stats[level + "_not_in_ref_tn"] += 1
             else:
-                # Both true node and predicted node are NOT 'None'
-                if true_node.id in reference_taxids:
+                # Both true tax id and predicted tax id are NOT 'None'
+                if true_taxid in reference_lineages:
                     # Classifer could have made the correct assignment, check if it did
-                    if true_node.id == predicted_node.id:
+                    if true_taxid == predicted_taxid:
                         stats[level + "_tp"] += 1
                     else:
                         stats[level + "_fp"] += 1
                 else:
                     # Classifier could not have made the correct assignment, but it made an assignment anyways
-                    assert true_node.id != predicted_node.id
+                    assert true_taxid != predicted_taxid
                     stats[level + "_not_in_ref_fp"] += 1
 
             # Increment the total count
             stats[level + "_total"] += 1
 
+    # Some assertions for logic correctness
     if args.ignore_unclassified:
-        taxonomy_issue_detected = False
-        if stats["genus_unclassified_fp"] > 0 or stats["genus_unclassified_tn"] > 0:
-            taxonomy_issue_detected = True
-        if stats["species_unclassified_fp"] > 0 or stats["species_unclassified_tn"] > 0:
-            taxonomy_issue_detected = True
-
-        if taxonomy_issue_detected:
-            # Log issue if there was one
-            logging.warning(
-                "Argument to ignore unclassified reads provided, but None values were detected in the ground truth"
-            )
-            logging.warning(
-                "There is likely an issue with the taxonomy or the ground truth read assignments"
-            )
+        for level in evaluation_levels:
+            assert stats[level + "_unclassified_fp"] == 0
+            assert stats[level + "_unclassified_tn"] == 0
 
     # Print formulas if needed
     if args.give_formulas:
@@ -228,6 +302,7 @@ def main():
         + stats["genus_not_in_ref_fp"]
     )
     genus_tn = stats["genus_unclassified_tn"] + stats["genus_not_in_ref_tn"]
+
     species_tp, species_fn = stats["species_tp"], stats["species_fn"]
     species_fp = (
         stats["species_fp"]
@@ -271,8 +346,8 @@ def main():
     except ZeroDivisionError:
         species_accuracy = "undef"
 
-    if args.yeast_stats and args.give_formulas:
-        print(f"total yeast reads: {stats['species_total']}\n")
+    if args.outside_reference and args.give_formulas:
+        print(f"total outside reference reads: {stats['species_total']}\n")
 
     if args.include_header:
         print(
@@ -284,7 +359,7 @@ def main():
     print_string += f"{genus_tp}\t{genus_fp}\t{genus_fn}\t{genus_tn}\t{species_tp}\t{species_fp}\t{species_fn}\t{species_tn}"
     print(print_string)
 
-    logging.info("Done reporting statistics!")
+    logging.info("done reporting statistics!")
 
 
 if __name__ == "__main__":
