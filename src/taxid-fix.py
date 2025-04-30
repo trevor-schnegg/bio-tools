@@ -33,10 +33,13 @@ def main():
             stripped_line = line.strip()
             split_line = list(stripped_line.split("\t"))
             if split_line[3] == args.file_name:
-                print(
-                    f"{split_line[0]}\t{split_line[1]}\t{args.new_taxid}\t{split_line[3]}"
-                )
-                total_updated += 1
+                if split_line[2] != args.new_taxid:
+                    print(
+                        f"{split_line[0]}\t{split_line[1]}\t{args.new_taxid}\t{split_line[3]}"
+                    )
+                    total_updated += 1
+                else:
+                    print(stripped_line)
             else:
                 print(stripped_line)
 
