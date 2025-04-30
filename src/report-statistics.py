@@ -28,7 +28,7 @@ def get_lineages_in_reference(filename, taxonomy, verbose):
             if species_node is None:
                 # If no species node is found, log it then exit
                 logging.error(
-                    f"no species node found for tax id: {ref_taxid} - fix this and run again"
+                    f"no species node found for reference tax id: {ref_taxid} - fix this and run again"
                 )
                 exit(1)
 
@@ -65,12 +65,7 @@ def get_lineages_in_reference(filename, taxonomy, verbose):
 def get_lineage(taxid, taxonomy, verbose, warned):
     # Find the species node
     species_node = taxonomy.parent(taxid, at_rank="species")
-    if species_node is None:
-        # If no species node is found, log it then exit
-        logging.error(
-            f"no species node found for tax id: {taxid} - fix this and run again"
-        )
-        exit(1)
+    species_taxid = int(species_node.id) if species_node is not None else None
 
     # Find the genus node
     genus_node = taxonomy.parent(taxid, at_rank="genus")
@@ -83,10 +78,13 @@ def get_lineage(taxid, taxonomy, verbose, warned):
         elif verbose:
             logging.warning(f"tax id {taxid} has no genus node")
 
-        # After logging, set the genus node to be the parent of the species node
-        genus_node = taxonomy.node(species_node.parent)
+        # After logging, try to set the genus node to be the parent of the species node
+        genus_node = (
+            taxonomy.node(species_node.parent) if species_node is not None else None
+        )
+    genus_taxid = int(genus_node.id) if genus_node is not None else None
 
-    return (int(genus_node.id), int(species_node.id)), warned
+    return (genus_taxid, species_taxid), warned
 
 
 def main():
@@ -213,14 +211,15 @@ def main():
                 str(true_taxid), taxonomy, args.verbose, warned
             )
             additional_lineages[true_taxid] = true_lineage
-            if true_taxid != true_lineage[1]:
+            if true_taxid != true_lineage[1] and true_lineage[1] is not None:
                 additional_lineages[(true_lineage[1])] = true_lineage
-            additional_lineages[true_lineage[0]] = (true_lineage[0], None)
+            if true_lineage[0] is not None:
+                additional_lineages[true_lineage[0]] = (true_lineage[0], None)
 
-        # Test that the ground truth lineage doesn't have a None value
-        if true_lineage[0] is None or true_lineage[1] is None:
-            logging.error(f"{true_lineage}")
-            exit()
+        # # Test that the ground truth lineage doesn't have a None value
+        # if true_lineage[0] is None or true_lineage[1] is None:
+        #     logging.error(f"ground truth lineage was (genus, species): {true_lineage}")
+        #     exit()
 
         # Get the predicted taxid
         predicted_taxid = (
@@ -238,9 +237,13 @@ def main():
                 str(predicted_taxid), taxonomy, args.verbose, warned
             )
             additional_lineages[predicted_taxid] = predicted_lineage
-            if predicted_taxid != predicted_lineage[1]:
+            if (
+                predicted_taxid != predicted_lineage[1]
+                and predicted_lineage[1] is not None
+            ):
                 additional_lineages[(predicted_lineage[1])] = predicted_lineage
-            additional_lineages[predicted_lineage[0]] = (predicted_lineage[0], None)
+            if predicted_lineage[0] is not None:
+                additional_lineages[predicted_lineage[0]] = (predicted_lineage[0], None)
 
         # Increment the correct count based on the observed lineage
         for true_taxid, predicted_taxid, level in zip(
